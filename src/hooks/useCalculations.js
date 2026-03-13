@@ -7,7 +7,7 @@ import {
   getMRA, getSSFRA, computeFersPension, computeFersOptions,
   computeAutoHigh3, computeServiceYearsAtRetirement, estimateSSPIA,
 } from '../utils/federalCalculations.js'
-import { computeRetirementTax } from '../utils/taxCalculations.js'
+import { computeRetirementTax, computeRothConversion } from '../utils/taxCalculations.js'
 import {
   computeTSPProjection, computeEmployerMatch,
   computeSocialSecurity, computeHomeProjection,
@@ -367,6 +367,29 @@ export function useCalculations(form, assumptions) {
     }
   }, [income.phase1Annual, income.phase2Annual, taxes.totalTax, expenses.totalAnnualAtRetirement, form.currentSalary])
 
+  // ── Roth Conversion Analysis ─────────────────────────────────────────────
+  const rothConversion = useMemo(() => {
+    return computeRothConversion({
+      strategy: form.rothConversionStrategy || 'none',
+      ordinaryIncomeInConversionYears: income.phase1Annual - (income.components?.tspAnnual || 0) - (income.components?.rothAnnual || 0),
+      traditionalBalance: (tsp.totalBalance || 0) + (roth.balance || 0),
+      customAmount: form.rothConversionCustomAmount || 0,
+      startAge: form.rothConversionStartAge ?? baseValues.retirementAge,
+      endAge: form.rothConversionEndAge ?? 72,
+      returnRate: assumptions.tspReturnRate,
+      filingStatus: baseValues.filingStatus,
+      retirementAge: baseValues.retirementAge,
+      lifeExpectancy: baseValues.lifeExpectancy,
+    })
+  }, [
+    form.rothConversionStrategy, form.rothConversionCustomAmount,
+    form.rothConversionStartAge, form.rothConversionEndAge,
+    income.phase1Annual, income.components,
+    tsp.totalBalance, roth.balance,
+    assumptions.tspReturnRate, baseValues.filingStatus,
+    baseValues.retirementAge, baseValues.lifeExpectancy,
+  ])
+
   // ── Portfolio longevity (Monte Carlo) ────────────────────────────────────
   const portfolio = useMemo(() => {
     const totalPortfolio = tsp.totalBalance + roth.balance + (form.brokerageBalance || 0)
@@ -508,6 +531,7 @@ export function useCalculations(form, assumptions) {
     },
     taxes,
     surplus,
+    rothConversion,
     portfolio,
     plan529,
     chartData,

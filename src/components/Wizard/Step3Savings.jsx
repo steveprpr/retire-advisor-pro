@@ -276,6 +276,89 @@ export default function Step3Savings() {
         </HelpAccordion>
       </div>
 
+      {/* Roth Conversion Strategy */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">
+            Roth conversion strategy
+            <HelpTooltip content="A Roth conversion moves pre-tax money (TSP traditional, 401k, or traditional IRA) into a Roth account. You pay income tax on the amount converted today, but all future growth and withdrawals become tax-free — and you avoid Required Minimum Distributions (RMDs) starting at age 73." className="ml-1" />
+          </h3>
+        </div>
+
+        <div>
+          <label className="label">Conversion approach</label>
+          <select
+            className="input-field md:w-96"
+            value={form.rothConversionStrategy}
+            onChange={e => updateField('rothConversionStrategy', e.target.value)}
+          >
+            <option value="none">No conversions — leave pre-tax funds as-is</option>
+            <option value="fill_12">Fill the 12% bracket each year (tax-efficient)</option>
+            <option value="fill_22">Fill the 22% bracket each year (aggressive conversion)</option>
+            <option value="custom">Custom — I'll enter an annual amount</option>
+          </select>
+          <p className="help-text">
+            {form.rothConversionStrategy === 'none' && 'Pre-tax funds will be subject to income tax and RMDs starting at age 73.'}
+            {form.rothConversionStrategy === 'fill_12' && 'Convert just enough each year to fill the 12% bracket — minimizes tax cost while shrinking your pre-tax balance.'}
+            {form.rothConversionStrategy === 'fill_22' && 'Convert more aggressively into the 22% bracket — pays more tax now but eliminates more RMD exposure.'}
+            {form.rothConversionStrategy === 'custom' && 'Enter a fixed annual amount to convert regardless of your tax bracket.'}
+          </p>
+        </div>
+
+        {form.rothConversionStrategy === 'custom' && (
+          <div>
+            <label className="label">Annual conversion amount ($)</label>
+            <div className="relative md:w-60">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <input
+                type="number"
+                className="input-field pl-7"
+                value={form.rothConversionCustomAmount || ''}
+                onChange={e => updateField('rothConversionCustomAmount', parseFloat(e.target.value) || 0)}
+                placeholder="20,000"
+              />
+            </div>
+          </div>
+        )}
+
+        {form.rothConversionStrategy !== 'none' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SliderWithInput
+              label="Start converting at age"
+              value={form.rothConversionStartAge ?? (form.targetRetirementAge || 60)}
+              onChange={v => updateField('rothConversionStartAge', v)}
+              min={50}
+              max={72}
+              step={1}
+              suffix=" yrs"
+              helpText="Usually at or after retirement when income drops and bracket room opens up."
+            />
+            <SliderWithInput
+              label="Stop converting at age"
+              value={form.rothConversionEndAge || 72}
+              onChange={v => updateField('rothConversionEndAge', v)}
+              min={55}
+              max={80}
+              step={1}
+              suffix=" yrs"
+              helpText="RMDs begin at 73 — finishing conversions by 72 avoids RMDs increasing your taxable income during the conversion window."
+            />
+          </div>
+        )}
+
+        <HelpAccordion title="When does a Roth conversion make sense?">
+          <p>Roth conversions are most valuable during a <strong>low-income window</strong> — typically between retirement and age 62 (when Social Security begins). During this window, your taxable income may be low enough to convert at the 12% bracket.</p>
+          <p className="mt-2"><strong>Key factors that favor converting:</strong></p>
+          <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
+            <li>You expect to be in a higher bracket in the future</li>
+            <li>You want to reduce or eliminate RMDs starting at age 73</li>
+            <li>You have long time horizon for tax-free growth</li>
+            <li>You can pay the conversion tax from outside funds (not the converted amount itself)</li>
+          </ul>
+          <p className="mt-2"><strong>TSP → Roth IRA:</strong> You must roll your TSP to a traditional IRA first after separation, then convert to Roth. The TSP itself does not support direct Roth conversions.</p>
+        </HelpAccordion>
+      </div>
+
       {/* Other savings */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-5">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Other savings</h3>

@@ -77,6 +77,97 @@ export function computeSSITaxablePortion(ssBenefit, otherIncome, filingStatus = 
   return { taxableSS, taxableRate }
 }
 
+// ── Roth Conversion Analysis ───────────────────────────────────────────────────
+// Models the tax cost and long-term benefit of converting pre-tax funds to Roth.
+export function computeRothConversion({
+  strategy = 'none',
+  ordinaryIncomeInConversionYears = 0, // pension + SRS + part-time (pre-SS income)
+  traditionalBalance = 0,              // TSP traditional + traditional IRA combined
+  customAmount = 0,
+  startAge = 60,
+  endAge = 72,
+  returnRate = 0.07,
+  filingStatus = 'mfj',
+  retirementAge = 60,
+  lifeExpectancy = 90,
+} = {}) {
+  if (strategy === 'none') {
+    return { strategy: 'none', annualConversionAmount: 0, annualTaxCost: 0, yearsOfConversion: 0, totalTaxPaid: 0, totalConverted: 0, rothBalanceAdded: 0, breakEvenAge: null, netLifetimeBenefit: 0, marginalRate: 0 }
+  }
+
+  const stdDeduction = filingStatus === 'mfj'
+    ? DEFAULT_ASSUMPTIONS.standardDeductionMFJ2024
+    : DEFAULT_ASSUMPTIONS.standardDeductionSingle2024
+
+  // Top of 12% and 22% brackets (taxable income, after std deduction)
+  const top12 = filingStatus === 'mfj' ? 94300 : 47150
+  const top22 = filingStatus === 'mfj' ? 201050 : 100525
+  const brackets = filingStatus === 'mfj'
+    ? DEFAULT_ASSUMPTIONS.federalBrackets2024MFJ
+    : DEFAULT_ASSUMPTIONS.federalBrackets2024Single
+
+  // Ordinary income already using up bracket room (after standard deduction)
+  const taxableOrdinaryIncome = Math.max(0, ordinaryIncomeInConversionYears - stdDeduction)
+
+  const effectiveStartAge = Math.max(startAge, retirementAge)
+  const yearsOfConversion = Math.max(0, endAge - effectiveStartAge)
+
+  let annualConversionAmount = 0
+  let marginalRate = 0.22
+
+  if (strategy === 'custom') {
+    annualConversionAmount = customAmount
+    const totalTaxableIncome = taxableOrdinaryIncome + customAmount
+    for (const b of brackets) {
+      if (totalTaxableIncome <= b.upTo) { marginalRate = b.rate; break }
+      marginalRate = b.rate
+    }
+  } else {
+    const targetTop = strategy === 'fill_12' ? top12 : top22
+    const room = Math.max(0, targetTop - taxableOrdinaryIncome)
+    // Don't convert more than the balance allows over the conversion window
+    const maxByBalance = yearsOfConversion > 0 ? traditionalBalance / yearsOfConversion : room
+    annualConversionAmount = Math.min(room, maxByBalance)
+    marginalRate = strategy === 'fill_12' ? 0.12 : 0.22
+  }
+
+  if (yearsOfConversion <= 0 || annualConversionAmount <= 0) {
+    return { strategy, annualConversionAmount: 0, annualTaxCost: 0, yearsOfConversion: 0, totalTaxPaid: 0, totalConverted: 0, rothBalanceAdded: 0, breakEvenAge: null, netLifetimeBenefit: 0, marginalRate }
+  }
+
+  const annualTaxCost = Math.round(annualConversionAmount * marginalRate)
+  const totalConverted = Math.round(annualConversionAmount * yearsOfConversion)
+  const totalTaxPaid = Math.round(annualTaxCost * yearsOfConversion)
+
+  // Roth grows tax-free from mid-conversion to life expectancy
+  const avgConversionAge = effectiveStartAge + yearsOfConversion / 2
+  const yearsToGrow = Math.max(0, lifeExpectancy - avgConversionAge)
+  const rothBalanceAdded = Math.round(totalConverted * Math.pow(1 + returnRate, yearsToGrow))
+
+  // Net benefit: tax saved on future growth vs. tax paid today
+  const growthOnConverted = rothBalanceAdded - totalConverted
+  const futureTaxSavedOnGrowth = Math.round(growthOnConverted * marginalRate)
+  const netLifetimeBenefit = futureTaxSavedOnGrowth - totalTaxPaid
+
+  // Break-even: years after conversion end when cumulative tax-free growth offsets upfront tax
+  // annualConversionAmount * (1+r)^n * marginalRate >= annualTaxCost  →  n = log(1+1/returnRate * marginalRate) / log(1+r)
+  const breakEvenYears = returnRate > 0 ? Math.log(1 + marginalRate / returnRate) / Math.log(1 + returnRate) : null
+  const breakEvenAge = breakEvenYears != null ? Math.round(endAge + breakEvenYears) : null
+
+  return {
+    strategy,
+    annualConversionAmount: Math.round(annualConversionAmount),
+    annualTaxCost,
+    yearsOfConversion,
+    totalConverted,
+    totalTaxPaid,
+    rothBalanceAdded,
+    breakEvenAge,
+    netLifetimeBenefit,
+    marginalRate,
+  }
+}
+
 // ── State Income Tax ───────────────────────────────────────────────────────────
 export function computeStateTax(taxableIncome, stateCode, isPension = false) {
   if (!stateCode) return { tax: 0, effectiveRate: 0 }

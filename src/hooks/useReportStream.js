@@ -136,7 +136,7 @@ export function useQuickInsight() {
 
 // ── Build condensed payload for AI report ────────────────────────────────────
 function buildReportPayload(calc, form) {
-  const { fers, tsp, roth, ss, va, home, expenses, income, taxes, surplus, portfolio, baseValues } = calc
+  const { fers, tsp, roth, ss, va, home, expenses, income, taxes, surplus, portfolio, rothConversion, baseValues } = calc
 
   const totalInvestable = (tsp?.totalBalance ?? 0) + (roth?.balance ?? 0)
   const yearsToRetirement = Math.max(0, (baseValues?.retirementAge ?? 60) - (baseValues?.currentAge ?? 55))
@@ -199,6 +199,14 @@ function buildReportPayload(calc, form) {
     countryKey: form.retirementCountryKey ?? null,
     countryName: form.retirementCountry ?? null,
     colSavingsPct,
+
+    // Roth conversion
+    rothConversionStrategy: rothConversion?.strategy ?? 'none',
+    rothConversionAnnualAmount: rothConversion?.annualConversionAmount ?? 0,
+    rothConversionAnnualTax: rothConversion?.annualTaxCost ?? 0,
+    rothConversionYears: rothConversion?.yearsOfConversion ?? 0,
+    rothConversionNetBenefit: rothConversion?.netLifetimeBenefit ?? 0,
+    rothConversionBreakEvenAge: rothConversion?.breakEvenAge ?? null,
 
     // Special flags
     vaRating: form.vaRating ?? 0,

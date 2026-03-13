@@ -67,6 +67,12 @@ const initialForm = {
   rothIRAReturnRate: 0.08,
   rothIRARetirementPlan: 'unsure', // 'growth_4pct' | 'dividend' | 'unsure'
 
+  // Roth conversion
+  rothConversionStrategy: 'none',   // 'none' | 'fill_12' | 'fill_22' | 'custom'
+  rothConversionCustomAmount: 0,
+  rothConversionStartAge: null,     // null = defaults to retirementAge
+  rothConversionEndAge: 72,
+
   // Spouse retirement plan
   spouseEmploymentType: '',          // 'federal' | 'private' | 'military' | 'self_employed' | 'nonprofit' | 'none'
   spouseRetirementSystem: 'fers',    // 'fers' | 'fers_rae' | 'csrs' | 'csrs_offset'
