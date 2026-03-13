@@ -24,8 +24,10 @@ export default function Step2Service() {
     form.high3FreezeAge || null,
   )
 
-  // Auto-compute service years from SCD
-  const autoServiceYears = computeServiceYearsAtRetirement(form.scdYear, form.targetRetirementAge || 60, form.birthYear)
+  // Auto-compute service years from SCD (uses month/day when available)
+  const autoServiceYears = computeServiceYearsAtRetirement(
+    form.scdYear, form.targetRetirementAge || 60, form.birthYear, form.scdMonth, form.scdDay
+  )
 
   if (!isFederal) {
     return <PrivateSectorSection />
@@ -102,20 +104,63 @@ export default function Step2Service() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">
-                Federal service start year (SCD)
+                Federal service start date (SCD)
                 <HelpTooltip content="Your SCD (Service Computation Date) is the date OPM uses to compute retirement eligibility. It may differ from your hire date due to prior federal service, military buyback, or breaks." className="ml-1" />
               </label>
-              <input
-                type="number"
-                className="input-field"
-                value={form.scdYear || ''}
-                onChange={e => updateField('scdYear', parseInt(e.target.value))}
-                placeholder={String(CURRENT_YEAR - 20)}
-                min="1960"
-                max={CURRENT_YEAR}
-              />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    className="input-field"
+                    value={form.scdYear || ''}
+                    onChange={e => updateField('scdYear', e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Year"
+                    min="1960"
+                    max={CURRENT_YEAR}
+                  />
+                  <p className="help-text text-center">Year</p>
+                </div>
+                <div className="w-20">
+                  <select
+                    className="input-field"
+                    value={form.scdMonth || ''}
+                    onChange={e => updateField('scdMonth', e.target.value ? parseInt(e.target.value) : null)}
+                  >
+                    <option value="">Mo</option>
+                    {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+                      <option key={m} value={i + 1}>{m}</option>
+                    ))}
+                  </select>
+                  <p className="help-text text-center">Month</p>
+                </div>
+                <div className="w-16">
+                  <input
+                    type="number"
+                    className="input-field"
+                    value={form.scdDay || ''}
+                    onChange={e => updateField('scdDay', e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Day"
+                    min="1"
+                    max="31"
+                  />
+                  <p className="help-text text-center">Day</p>
+                </div>
+              </div>
               {form.scdYear && (
-                <p className="help-text">{CURRENT_YEAR - form.scdYear} years of service to date</p>
+                <p className="help-text mt-1">
+                  {form.scdMonth && form.scdDay
+                    ? (() => {
+                        const scd = new Date(form.scdYear, form.scdMonth - 1, form.scdDay)
+                        const today = new Date()
+                        const ms = today - scd
+                        const yrs = ms / (1000 * 60 * 60 * 24 * 365.25)
+                        const wholeYrs = Math.floor(yrs)
+                        const months = Math.floor((yrs - wholeYrs) * 12)
+                        return `${wholeYrs} yrs ${months} mo of service to date`
+                      })()
+                    : `${CURRENT_YEAR - form.scdYear} years of service to date (add month/day for precision)`
+                  }
+                </p>
               )}
             </div>
             <div className="flex flex-col justify-center">

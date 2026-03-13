@@ -74,7 +74,7 @@ export function useCalculations(form, assumptions) {
 
     // Auto-compute service years from SCD, or project from current years entered manually
     const serviceYears = (form.serviceYearsMode !== 'manual')
-      ? (computeServiceYearsAtRetirement(form.scdYear, baseValues.retirementAge, form.birthYear) ?? (form.credibleServiceYears || 0))
+      ? (computeServiceYearsAtRetirement(form.scdYear, baseValues.retirementAge, form.birthYear, form.scdMonth, form.scdDay) ?? (form.credibleServiceYears || 0))
       : (form.credibleServiceYears || 0) + Math.max(0, baseValues.retirementAge - baseValues.currentAge)
 
     // Quick SS@62 estimate for SRS calculation

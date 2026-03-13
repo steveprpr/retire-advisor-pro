@@ -23,6 +23,8 @@ const initialForm = {
   militaryService: 'none',       // 'none' | 'no_credit' | 'deposit_paid' | 'deposit_progress'
   militaryServiceYears: 0,
   scdYear: null,
+  scdMonth: null,   // 1–12, optional
+  scdDay: null,     // 1–31, optional
   serviceYearsMode: 'startYear',    // 'startYear' = calculate from SCD | 'manual' = enter directly
   high3Salary: 95000,
   high3Override: false,          // if true, use high3Salary directly; if false, auto-compute

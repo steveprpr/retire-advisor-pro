@@ -42,7 +42,7 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0, ssAtFRAMonthly = 0 
       // Determine service years at this retirement age
       let serviceYears
       if (form.serviceYearsMode !== 'manual' && form.scdYear) {
-        serviceYears = computeServiceYearsAtRetirement(form.scdYear, age, form.birthYear) ?? (form.credibleServiceYears ?? 20)
+        serviceYears = computeServiceYearsAtRetirement(form.scdYear, age, form.birthYear, form.scdMonth, form.scdDay) ?? (form.credibleServiceYears ?? 20)
       } else {
         // Manual: user entered current years — project forward to this retirement age
         serviceYears = (form.credibleServiceYears ?? 20) + Math.max(0, age - currentAge)

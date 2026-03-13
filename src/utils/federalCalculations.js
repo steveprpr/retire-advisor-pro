@@ -89,12 +89,25 @@ export function computeAutoHigh3(currentSalary, growthRate, targetRetirementAge,
 }
 
 // ── Service Years at Retirement (from SCD) ────────────────────────────────────
-export function computeServiceYearsAtRetirement(scdYear, targetRetirementAge, birthYear) {
+// scdMonth and scdDay are optional (1-based). When provided, calculation is
+// precise to the day; otherwise falls back to whole-year arithmetic.
+export function computeServiceYearsAtRetirement(scdYear, targetRetirementAge, birthYear, scdMonth, scdDay) {
   if (!scdYear || !birthYear) return null
-  const currentYear = new Date().getFullYear()
+  const today = new Date()
+  const currentYear = today.getFullYear()
   const currentAge = currentYear - parseInt(birthYear)
   const yearsToRetirement = Math.max(0, (targetRetirementAge || 60) - currentAge)
   const retirementYear = currentYear + yearsToRetirement
+
+  if (scdMonth && scdDay) {
+    // Precise: retirement is assumed to occur on the birthday month of retirementYear
+    const birthMonth = today.getMonth() + 1  // approximate; refine if birthMonth available
+    const retirementDate = new Date(retirementYear, birthMonth - 1, 1)
+    const scdDate = new Date(parseInt(scdYear), parseInt(scdMonth) - 1, parseInt(scdDay))
+    const msPerYear = 1000 * 60 * 60 * 24 * 365.25
+    return Math.max(0, (retirementDate - scdDate) / msPerYear)
+  }
+
   return Math.max(0, retirementYear - parseInt(scdYear))
 }
 
