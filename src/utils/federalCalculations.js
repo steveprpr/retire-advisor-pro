@@ -111,44 +111,79 @@ export function computeServiceYearsAtRetirement(scdYear, targetRetirementAge, bi
   return Math.max(0, retirementYear - parseInt(scdYear))
 }
 
-// ── SS PIA Estimation — AIME Bend Point Formula (2024) ────────────────────────
+// ── SS PIA Estimation — AIME Bend Point Formula (2025) ────────────────────────
 // Estimates FRA monthly benefit (PIA) from career salary history.
-// Use this when user hasn't provided an SSA statement.
+// Uses SSA wage-indexing: past earnings are indexed to the year the worker turns 60
+// (the "indexing year"), which matches how SSA computes AIME.
+// Source: SSA POMS RS 00605.072; 2025 bend points ssa.gov/OACT/COLA/piaformula.html
 export function estimateSSPIA({
   currentSalary = 0,
   currentAge = 55,
+  birthYear = null,
   careerStartAge = 22,
-  claimingAge = 67,
   salaryGrowthRate = 0.01,
   wepApplies = false,
   ssWorkHistory30plus = false,
+  // legacy param — ignored; PIA is always FRA-based regardless of claiming age
+  claimingAge: _claimingAge,
 } = {}) {
   if (!currentSalary || currentSalary <= 0) return 0
 
+  const SS_WAGE_BASE_2025 = 176100  // 2025 SS taxable maximum
+  const AWI_GROWTH = 0.035          // approximate historical AWI growth rate
   const rate = Math.max(0, salaryGrowthRate || 0.01)
+  const currentYear = new Date().getFullYear()
+
+  // SSA indexes earnings to the year the worker turns 60 ("index year")
+  const indexAge = 60
+  const bYear = birthYear ? parseInt(birthYear) : currentYear - currentAge
+  const indexYear = bYear + indexAge
+
+  // SS wage base grows roughly with AWI; approximate base for earlier years
+  function wageBaseForYear(year) {
+    const yearsFromNow = year - currentYear
+    return SS_WAGE_BASE_2025 / Math.pow(1 + AWI_GROWTH, -yearsFromNow)
+  }
+
+  // Wage indexing factor: brings earnings from `year` to index-year dollars.
+  // Earnings from index year onward count at face value (SSA rule).
+  function indexFactor(year) {
+    if (year >= indexYear) return 1
+    return Math.pow(1 + AWI_GROWTH, indexYear - year)
+  }
+
   const earnings = []
 
-  // Past earnings — back-calculate using reverse salary growth
+  // Past earnings — back-calculate nominal salary, cap at wage base, then index
   const yearsWorked = Math.max(0, currentAge - careerStartAge)
-  for (let y = 0; y < yearsWorked; y++) {
-    const yearsAgo = yearsWorked - y
-    earnings.push(currentSalary / Math.pow(1 + rate, yearsAgo))
+  for (let i = 0; i < yearsWorked; i++) {
+    const yearOfEarning = currentYear - (yearsWorked - i)
+    const nominalEarning = currentSalary / Math.pow(1 + rate, yearsWorked - i)
+    const cappedNominal = Math.min(nominalEarning, wageBaseForYear(yearOfEarning))
+    earnings.push(cappedNominal * indexFactor(yearOfEarning))
   }
 
-  // Future earnings — project forward to claiming age
-  const yearsUntilClaiming = Math.max(0, claimingAge - currentAge)
-  for (let y = 1; y <= yearsUntilClaiming; y++) {
-    earnings.push(currentSalary * Math.pow(1 + rate, y))
+  // Current year
+  const cappedCurrent = Math.min(currentSalary, SS_WAGE_BASE_2025)
+  earnings.push(cappedCurrent * indexFactor(currentYear))
+
+  // Project earnings forward through age 62 (SSA needs 35 years total)
+  const yearsUntil62 = Math.max(0, 62 - currentAge)
+  for (let y = 1; y <= yearsUntil62; y++) {
+    const yearOfEarning = currentYear + y
+    const projectedEarning = currentSalary * Math.pow(1 + rate, y)
+    const cappedEarning = Math.min(projectedEarning, SS_WAGE_BASE_2025 * Math.pow(1 + AWI_GROWTH, y))
+    earnings.push(cappedEarning * indexFactor(yearOfEarning))
   }
 
-  // Top 35 earning years → AIME
+  // Top 35 earning years → AIME (Average Indexed Monthly Earnings)
   const sorted = [...earnings].sort((a, b) => b - a)
   const top35 = sorted.slice(0, 35)
-  const aime = top35.reduce((sum, e) => sum + e, 0) / 420  // 35 × 12 months
+  const aime = top35.reduce((sum, e) => sum + e, 0) / 420  // 35 years × 12 months
 
-  // 2024 PIA bend points
-  const BP1 = 1174
-  const BP2 = 7078
+  // 2025 PIA bend points (updated from 2024's $1,174 / $7,078)
+  const BP1 = 1226
+  const BP2 = 7391
 
   let pia
   if (aime <= BP1) {
@@ -159,7 +194,9 @@ export function estimateSSPIA({
     pia = BP1 * 0.90 + (BP2 - BP1) * 0.32 + (aime - BP2) * 0.15
   }
 
-  // WEP: reduces first-bend 90% factor to 40% (max reduction $587/mo in 2024)
+  // WEP: reduces first-bend 90% factor to 40% (max $627/mo in 2025)
+  // Note: WEP was officially repealed by Social Security Fairness Act (Jan 2025)
+  // but flag is kept for pre-repeal scenarios
   if (wepApplies && !ssWorkHistory30plus) {
     let wepPIA
     if (aime <= BP1) {
@@ -169,7 +206,7 @@ export function estimateSSPIA({
     } else {
       wepPIA = BP1 * 0.40 + (BP2 - BP1) * 0.32 + (aime - BP2) * 0.15
     }
-    const wepReduction = Math.min(pia - wepPIA, 587)
+    const wepReduction = Math.min(pia - wepPIA, 627)
     pia = Math.max(pia - wepReduction, pia * 0.50)
   }
 

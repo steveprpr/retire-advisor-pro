@@ -23,7 +23,15 @@ export function useCalculations(form, assumptions) {
 
   // ── Derived base values ──────────────────────────────────────────────────
   const baseValues = useMemo(() => {
-    const currentAge = form.birthYear ? currentYear - form.birthYear : 55
+    // Use exact birth date when month/day available, otherwise fall back to year-only
+    let currentAge
+    if (form.birthYear && form.birthMonth && form.birthDay) {
+      const today = new Date()
+      const birthDate = new Date(parseInt(form.birthYear), parseInt(form.birthMonth) - 1, parseInt(form.birthDay))
+      currentAge = Math.floor((today - birthDate) / (365.25 * 24 * 3600 * 1000))
+    } else {
+      currentAge = form.birthYear ? currentYear - parseInt(form.birthYear) : 55
+    }
     const retirementAge = form.targetRetirementAge || 60
     const yearsToRetirement = Math.max(0, retirementAge - currentAge)
     const lifeExpectancy = assumptions.lifeExpectancyOverride || form.lifeExpectancy || 90
@@ -34,7 +42,8 @@ export function useCalculations(form, assumptions) {
     const spouseAge = form.spouseBirthYear ? currentYear - form.spouseBirthYear : null
     return { currentAge, retirementAge, yearsToRetirement, lifeExpectancy, yearsInRetirement, isFederal, isMarried, filingStatus, spouseAge }
   }, [
-    form.birthYear, form.targetRetirementAge, form.lifeExpectancy,
+    form.birthYear, form.birthMonth, form.birthDay,
+    form.targetRetirementAge, form.lifeExpectancy,
     form.employmentType, form.maritalStatus, form.spouseBirthYear,
     assumptions.lifeExpectancyOverride,
   ])
@@ -81,8 +90,8 @@ export function useCalculations(form, assumptions) {
     const ssAt62 = estimateSSPIA({
       currentSalary: form.currentSalary || 0,
       currentAge: baseValues.currentAge,
+      birthYear: form.birthYear,
       careerStartAge: form.careerStartAge || 22,
-      claimingAge: 62,
       salaryGrowthRate: form.salaryGrowthRate || 0.01,
       wepApplies: false,  // SRS ignores WEP
       ssWorkHistory30plus: form.ssWorkHistory30plus || false,
@@ -198,8 +207,8 @@ export function useCalculations(form, assumptions) {
       ? estimateSSPIA({
           currentSalary: form.currentSalary || 0,
           currentAge: baseValues.currentAge,
+          birthYear: form.birthYear,
           careerStartAge: form.careerStartAge || 22,
-          claimingAge: getSSFRA(form.birthYear),
           salaryGrowthRate: form.salaryGrowthRate || 0.01,
           wepApplies: assumptions.wepGpoApplies,
           ssWorkHistory30plus: form.ssWorkHistory30plus || false,

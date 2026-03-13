@@ -6,6 +6,17 @@ import { getMRA } from '../../utils/federalCalculations.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const BIRTH_YEARS = Array.from({ length: 41 }, (_, i) => 1945 + i)  // 1945–1985
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+function exactAge(year, month, day) {
+  if (!year) return null
+  if (month && day) {
+    const today = new Date()
+    const bd = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    return Math.floor((today - bd) / (365.25 * 24 * 3600 * 1000))
+  }
+  return CURRENT_YEAR - parseInt(year)
+}
 
 const EMPLOYMENT_TYPES = [
   { value: 'federal', label: 'Federal civilian — FERS' },
@@ -31,7 +42,7 @@ export default function Step1Personal() {
   const isFederal = form.employmentType === 'federal' || form.employmentType === 'federal_csrs'
   const isMarried = form.maritalStatus === 'married'
 
-  const currentAge = form.birthYear ? CURRENT_YEAR - form.birthYear : null
+  const currentAge = exactAge(form.birthYear, form.birthMonth, form.birthDay)
   const mra = form.birthYear ? getMRA(form.birthYear) : 57
   const retirementAge = form.targetRetirementAge || 60
   const yearsOfRetirement = form.lifeExpectancy - retirementAge
@@ -43,27 +54,60 @@ export default function Step1Personal() {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Year of Birth */}
+        {/* Date of Birth */}
         <div>
           <label className="label">
-            Your year of birth
+            Your date of birth
             <HelpTooltip
-              content="Used to calculate your age, MRA (for federal employees), and Social Security Full Retirement Age. No exact date collected."
+              content="Year is required. Month and day are optional but improve precision for MRA, SS full retirement age, and service year calculations."
               className="ml-1"
             />
           </label>
-          <select
-            className="input-field"
-            value={form.birthYear || ''}
-            onChange={e => updateField('birthYear', parseInt(e.target.value))}
-          >
-            <option value="">Select year…</option>
-            {BIRTH_YEARS.map(y => (
-              <option key={y} value={y}>{y} (age {CURRENT_YEAR - y})</option>
-            ))}
-          </select>
-          {currentAge && (
-            <p className="help-text">Current age: {currentAge}</p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <select
+                className="input-field"
+                value={form.birthYear || ''}
+                onChange={e => updateField('birthYear', e.target.value ? parseInt(e.target.value) : null)}
+              >
+                <option value="">Year…</option>
+                {BIRTH_YEARS.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <p className="help-text text-center">Year</p>
+            </div>
+            <div className="w-20">
+              <select
+                className="input-field"
+                value={form.birthMonth || ''}
+                onChange={e => updateField('birthMonth', e.target.value ? parseInt(e.target.value) : null)}
+              >
+                <option value="">Mo</option>
+                {MONTHS.map((m, i) => (
+                  <option key={m} value={i + 1}>{m}</option>
+                ))}
+              </select>
+              <p className="help-text text-center">Month</p>
+            </div>
+            <div className="w-16">
+              <input
+                type="number"
+                className="input-field"
+                value={form.birthDay || ''}
+                onChange={e => updateField('birthDay', e.target.value ? parseInt(e.target.value) : null)}
+                placeholder="Day"
+                min="1"
+                max="31"
+              />
+              <p className="help-text text-center">Day</p>
+            </div>
+          </div>
+          {currentAge != null && (
+            <p className="help-text mt-1">
+              Current age: {currentAge}
+              {!(form.birthMonth && form.birthDay) && ' (add month/day for precision)'}
+            </p>
           )}
         </div>
 
@@ -82,20 +126,55 @@ export default function Step1Personal() {
           </select>
         </div>
 
-        {/* Spouse birth year (if married) */}
+        {/* Spouse date of birth (if married) */}
         {isMarried && (
           <div>
-            <label className="label">Spouse year of birth</label>
-            <select
-              className="input-field"
-              value={form.spouseBirthYear || ''}
-              onChange={e => updateField('spouseBirthYear', parseInt(e.target.value))}
-            >
-              <option value="">Select year…</option>
-              {BIRTH_YEARS.map(y => (
-                <option key={y} value={y}>{y} (age {CURRENT_YEAR - y})</option>
-              ))}
-            </select>
+            <label className="label">Spouse date of birth</label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <select
+                  className="input-field"
+                  value={form.spouseBirthYear || ''}
+                  onChange={e => updateField('spouseBirthYear', e.target.value ? parseInt(e.target.value) : null)}
+                >
+                  <option value="">Year…</option>
+                  {BIRTH_YEARS.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                <p className="help-text text-center">Year</p>
+              </div>
+              <div className="w-20">
+                <select
+                  className="input-field"
+                  value={form.spouseBirthMonth || ''}
+                  onChange={e => updateField('spouseBirthMonth', e.target.value ? parseInt(e.target.value) : null)}
+                >
+                  <option value="">Mo</option>
+                  {MONTHS.map((m, i) => (
+                    <option key={m} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+                <p className="help-text text-center">Month</p>
+              </div>
+              <div className="w-16">
+                <input
+                  type="number"
+                  className="input-field"
+                  value={form.spouseBirthDay || ''}
+                  onChange={e => updateField('spouseBirthDay', e.target.value ? parseInt(e.target.value) : null)}
+                  placeholder="Day"
+                  min="1"
+                  max="31"
+                />
+                <p className="help-text text-center">Day</p>
+              </div>
+            </div>
+            {form.spouseBirthYear && (
+              <p className="help-text mt-1">
+                Spouse age: {exactAge(form.spouseBirthYear, form.spouseBirthMonth, form.spouseBirthDay)}
+              </p>
+            )}
           </div>
         )}
 

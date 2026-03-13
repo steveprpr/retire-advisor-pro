@@ -122,10 +122,25 @@ export function computePortfolioDrawdown({
 }
 
 // ── Social Security Calculations ───────────────────────────────────────────────
+// SSA benefit factor for any claiming age vs FRA.
+// Uses per-month reduction/credit per SSA rules:
+//   Early: first 36 months = 5/9% per month; beyond 36 months = 5/12% per month
+//   Late:  each month past FRA = 2/3% per month (8%/year)
+function ssFactorAtAge(claimingAge, fra) {
+  const monthsFromFRA = Math.round((claimingAge - fra) * 12)
+  if (monthsFromFRA >= 0) {
+    return 1 + monthsFromFRA * (2 / 3 / 100)
+  }
+  const monthsEarly = -monthsFromFRA
+  const first36 = Math.min(monthsEarly, 36) * (5 / 9 / 100)
+  const beyond36 = Math.max(0, monthsEarly - 36) * (5 / 12 / 100)
+  return 1 - (first36 + beyond36)
+}
+
 export function computeSocialSecurity({
   fraMonthlyBenefit = 0,
   birthYear,
-  claimingAge = 67,
+  claimingAge = null,
   spouseFRABenefit = 0,
   spouseClaimingAge = 67,
   wepGpoApplies = false,
@@ -136,15 +151,9 @@ export function computeSocialSecurity({
 
   const fra = getSSFRA(birthYear || 1963)
 
-  // Reduction for claiming at 62
-  // For FRA = 67: reduction is 30% (5/9% per month × 36 + 5/12% per month × 24)
-  const yearsEarly62 = fra - 62
-  const reductionPct62 = Math.min(0.30, (Math.min(36, yearsEarly62 * 12) * (5/9/100)) + (Math.max(0, yearsEarly62 * 12 - 36) * (5/12/100)))
-  const at62Monthly = fraMonthlyBenefit * (1 - reductionPct62)
-
-  // Delayed credit: 8% per year past FRA, max 70
-  const delayYears = Math.min(3, Math.max(0, 70 - fra))  // typically 3 years delay to 70
-  const at70Monthly = fraMonthlyBenefit * (1 + delayYears * 0.08)
+  // Benefit at exact ages using per-month SSA formula
+  const at62Monthly = fraMonthlyBenefit * ssFactorAtAge(62, fra)
+  const at70Monthly = fraMonthlyBenefit * ssFactorAtAge(70, fra)
 
   // WEP reduction (behind feature flag — repealed Jan 2025)
   const wepAdjustment = wepGpoApplies ? wepReduction : 0
@@ -153,8 +162,10 @@ export function computeSocialSecurity({
   const fraAdjusted = Math.max(0, fraMonthlyBenefit - wepAdjustment)
   const at70Adjusted = Math.max(0, at70Monthly - wepAdjustment)
 
-  // Claiming strategy result
-  const selectedMonthly = claimingAge <= 62 ? at62Adjusted : claimingAge >= 70 ? at70Adjusted : fraAdjusted
+  // Claiming strategy: use exact per-month formula for any integer age
+  const effectiveClaimingAge = claimingAge ?? fra
+  const claimFactor = ssFactorAtAge(Math.max(62, Math.min(70, effectiveClaimingAge)), fra)
+  const selectedMonthly = Math.max(0, fraMonthlyBenefit * claimFactor - wepAdjustment)
 
   // Spousal benefit
   const spousalBenefit = Math.max(0, spouseFRABenefit * 0.50)

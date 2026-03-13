@@ -6,7 +6,11 @@ import { DEFAULT_ASSUMPTIONS } from '../config/defaults.js'
 const initialForm = {
   // Step 1 — Personal Profile
   birthYear: 1970,
+  birthMonth: null,    // 1–12, optional
+  birthDay: null,      // 1–31, optional
   spouseBirthYear: null,
+  spouseBirthMonth: null,
+  spouseBirthDay: null,
   maritalStatus: 'single',       // 'single' | 'married' | 'divorced' | 'widowed'
   currentStateCode: '',
   employmentType: 'federal',     // 'federal' | 'federal_csrs' | 'military' | 'private' | 'selfemployed' | 'nonprofit' | 'state_local' | 'other'
