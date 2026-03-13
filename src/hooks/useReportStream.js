@@ -157,6 +157,8 @@ function buildReportPayload(calc, form) {
 
     // Monthly income (names match server's buildUserMessage)
     fersMonthly: Math.round(fers?.netMonthlyAnnuity ?? 0),
+    srsMonthly: Math.round(fers?.srsMonthly ?? 0),
+    hasSRS: fers?.hasSRS ?? false,
     ssStrategy: form.ssClaimingStrategy ?? 'fra',
     ssMonthly: Math.round(ss?.selectedMonthly ?? 0),
     tspMonthly: Math.round((tsp?.annualWithdrawal ?? 0) / 12),

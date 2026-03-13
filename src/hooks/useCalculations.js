@@ -281,6 +281,8 @@ export function useCalculations(form, assumptions) {
   // ── Income phases ─────────────────────────────────────────────────────────
   const income = useMemo(() => {
     const pensionAnnual = fers.netAnnualAnnuity || 0
+    // FERS Special Retirement Supplement — SS bridge paid from retirement until age 62
+    const srsAnnual = fers.hasSRS ? (fers.srsMonthly || 0) * 12 : 0
     const tspAnnual = tsp.annualWithdrawal || 0
     const rothAnnual = roth.annualIncome || 0
     const vaAnnual = va.annual || 0
@@ -288,14 +290,15 @@ export function useCalculations(form, assumptions) {
     const rentalAnnual = form.hasRentalProperty ? Math.max(0, (form.rentalMonthlyGross || 0) * 12 - (form.rentalAnnualExpenses || 0)) : 0
     const otherAnnual = (form.otherPensionAnnuity || 0) + (form.hasPension && !baseValues.isFederal ? 0 : 0)
 
-    // Phase 1: pre-Social Security
-    const phase1Annual = pensionAnnual + tspAnnual + rothAnnual + vaAnnual + partTimeAnnual + rentalAnnual + otherAnnual
+    // Phase 1: pre-Social Security (includes SRS bridge for eligible federal employees)
+    const phase1Annual = pensionAnnual + srsAnnual + tspAnnual + rothAnnual + vaAnnual + partTimeAnnual + rentalAnnual + otherAnnual
     const phase1Monthly = phase1Annual / 12
 
-    // Phase 2: SS added
+    // Phase 2: SRS ends at 62 and real SS begins
     const ssAnnual = ss.selectedAnnual || 0
     const spouseSSAnnual = ss.spousalAnnual || 0
-    const phase2Annual = phase1Annual + ssAnnual + spouseSSAnnual
+    // Phase 2 removes SRS (replaced by SS) and adds actual SS benefit
+    const phase2Annual = (phase1Annual - srsAnnual) + ssAnnual + spouseSSAnnual
     const phase2Monthly = phase2Annual / 12
 
     // Phase 3: survivor income (simplified — 60% of joint income)
@@ -303,13 +306,14 @@ export function useCalculations(form, assumptions) {
     const phase3Monthly = phase3Annual / 12
 
     return {
-      components: { pensionAnnual, tspAnnual, rothAnnual, vaAnnual, partTimeAnnual, rentalAnnual, otherAnnual, ssAnnual, spouseSSAnnual },
+      components: { pensionAnnual, srsAnnual, tspAnnual, rothAnnual, vaAnnual, partTimeAnnual, rentalAnnual, otherAnnual, ssAnnual, spouseSSAnnual },
       phase1Annual, phase1Monthly,
       phase2Annual, phase2Monthly,
       phase3Annual, phase3Monthly,
     }
   }, [
-    fers.netAnnualAnnuity, tsp.annualWithdrawal, roth.annualIncome,
+    fers.netAnnualAnnuity, fers.hasSRS, fers.srsMonthly,
+    tsp.annualWithdrawal, roth.annualIncome,
     va.annual, ss.selectedAnnual, ss.spousalAnnual,
     form.hasPartTimeInRetirement, form.partTimeAnnualAmount,
     form.hasRentalProperty, form.rentalMonthlyGross, form.rentalAnnualExpenses,

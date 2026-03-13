@@ -86,7 +86,7 @@ export default function Step5Goals() {
               <HelpTooltip content="If you retire before 62 with MRA+10 eligibility, you can take the annuity now (with a penalty) or postpone it to avoid the penalty." className="ml-1" />
             </label>
             <select className="input-field md:w-96" value={form.fersEarlyOption} onChange={e => updateField('fersEarlyOption', e.target.value)}>
-              <option value="take_now">Take annuity now (with penalty)</option>
+              <option value="take_now">Take annuity at {mra} (with penalty)</option>
               <option value="postpone_60">Postpone to age 60 (no penalty)</option>
               <option value="postpone_62">Postpone to age 62 (1.1% multiplier)</option>
               <option value="see_all">Show me all options in the report</option>
