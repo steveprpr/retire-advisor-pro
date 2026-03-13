@@ -99,17 +99,28 @@ export default function Step5Goals() {
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Social Security</h3>
 
+        {/* How-to instructions */}
+        <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-900 dark:text-blue-200 space-y-1">
+          <p className="font-medium">How to find your Social Security estimate:</p>
+          <ol className="list-decimal list-inside space-y-0.5 text-blue-800 dark:text-blue-300">
+            <li>Go to <a href="https://www.ssa.gov/myaccount" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-blue-600">ssa.gov/myaccount</a> and sign in (or create a free account)</li>
+            <li>Click <strong>"Estimated Benefits"</strong> in the left menu</li>
+            <li>Find the <strong>"Full Retirement Age"</strong> column — enter that amount below</li>
+          </ol>
+          <p className="text-blue-700 dark:text-blue-400 text-xs">If you leave this blank, we'll estimate it from your salary history — entering your actual SSA figure gives a more accurate plan.</p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">
               Your estimated SS benefit at FRA ($)
-              <HelpTooltip content="Find your estimated benefit at ssa.gov/myaccount — look for 'Your Retirement Benefits' table. Use the 'Full Retirement Age' column." className="ml-1" />
+              <HelpTooltip content="Enter the 'Full Retirement Age' monthly benefit from your SSA statement at ssa.gov/myaccount. If left blank, we estimate it from your current salary and career history." className="ml-1" />
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
               <input type="number" className="input-field pl-7" value={form.ssBenefitAtFRA || ''} onChange={e => updateField('ssBenefitAtFRA', parseFloat(e.target.value) || 0)} placeholder="2,000" />
             </div>
-            <p className="help-text">Find your estimate at <strong>ssa.gov/myaccount</strong></p>
+            <p className="help-text">Leave blank to use our built-in estimator</p>
             {form.ssBenefitAtFRA > 0 && (
               <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
                 <div>At 62: ~{formatCurrency(form.ssBenefitAtFRA * 0.75)}/mo</div>
