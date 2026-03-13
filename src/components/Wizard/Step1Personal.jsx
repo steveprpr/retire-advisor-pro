@@ -1,6 +1,6 @@
 import { useForm } from '../../context/AppContext.jsx'
 import { STATE_LIST } from '../../data/stateTaxData.js'
-import { HelpTooltip } from '../common/HelpTooltip.jsx'
+import { HelpTooltip, HelpAccordion } from '../common/HelpTooltip.jsx'
 import { SliderWithInput } from '../common/SliderWithInput.jsx'
 import { getMRA } from '../../utils/federalCalculations.js'
 
@@ -19,14 +19,14 @@ function exactAge(year, month, day) {
 }
 
 const EMPLOYMENT_TYPES = [
-  { value: 'federal', label: 'Federal civilian — FERS' },
-  { value: 'federal_csrs', label: 'Federal civilian — CSRS' },
-  { value: 'military', label: 'Military' },
-  { value: 'private', label: 'Private sector' },
-  { value: 'selfemployed', label: 'Self-employed' },
-  { value: 'nonprofit', label: 'Non-profit / 501(c)(3)' },
-  { value: 'state_local', label: 'State / local government' },
-  { value: 'other', label: 'Other' },
+  { value: 'federal', label: 'Federal civilian — FERS', desc: 'Federal Employees Retirement System — hired 1984 or later. Includes pension, TSP, and Social Security.' },
+  { value: 'federal_csrs', label: 'Federal civilian — CSRS', desc: 'Civil Service Retirement System — typically hired before 1984. Larger pension, no Social Security credit.' },
+  { value: 'military', label: 'Military', desc: 'Active duty or Reserve/Guard retirement. May have both military pension and FERS if you joined a federal agency after service.' },
+  { value: 'private', label: 'Private sector', desc: '401(k), possible employer pension, and Social Security.' },
+  { value: 'selfemployed', label: 'Self-employed', desc: 'SEP-IRA, Solo 401(k), and Self-Employment Social Security (you pay both halves).' },
+  { value: 'nonprofit', label: 'Non-profit / 501(c)(3)', desc: 'Often 403(b) plans. Some nonprofits have defined-benefit pensions.' },
+  { value: 'state_local', label: 'State / local government', desc: 'State pension system (PERS/STRS/etc.), often with separate Social Security rules.' },
+  { value: 'other', label: 'Other', desc: 'Use this for mixed employment histories or non-standard situations.' },
 ]
 
 const SPECIAL_CATEGORIES = [
@@ -34,7 +34,7 @@ const SPECIAL_CATEGORIES = [
   { value: 'leo', label: 'Law enforcement officer (LEO)' },
   { value: 'firefighter', label: 'Firefighter' },
   { value: 'atc', label: 'Air traffic controller (ATC)' },
-  { value: 'special_ops', label: 'Special ops / DSS' },
+  { value: 'special_ops', label: 'Special ops / DSS (Diplomatic Security Service)' },
 ]
 
 export default function Step1Personal() {
@@ -59,7 +59,7 @@ export default function Step1Personal() {
           <label className="label">
             Your date of birth
             <HelpTooltip
-              content="Year is required. Month and day are optional but improve precision for MRA, SS full retirement age, and service year calculations."
+              content="Year is required. Month and day are optional but improve precision for MRA, SS Full Retirement Age, and service year calculations."
               className="ml-1"
             />
           </label>
@@ -113,7 +113,10 @@ export default function Step1Personal() {
 
         {/* Marital Status */}
         <div>
-          <label className="label">Marital status</label>
+          <label className="label">
+            Marital status
+            <HelpTooltip content="Affects your tax filing status (Married Filing Jointly vs. single), Social Security spousal benefit eligibility (up to 50% of your spouse's benefit), and survivor annuity calculations." className="ml-1" />
+          </label>
           <select
             className="input-field"
             value={form.maritalStatus}
@@ -129,7 +132,10 @@ export default function Step1Personal() {
         {/* Spouse date of birth (if married) */}
         {isMarried && (
           <div>
-            <label className="label">Spouse date of birth</label>
+            <label className="label">
+              Spouse date of birth
+              <HelpTooltip content="Used to calculate your spouse's MRA, Social Security Full Retirement Age, and survivor benefit projections." className="ml-1" />
+            </label>
             <div className="flex gap-2">
               <div className="w-20">
                 <select
@@ -180,7 +186,10 @@ export default function Step1Personal() {
 
         {/* Current state */}
         <div>
-          <label className="label">Current state of residence</label>
+          <label className="label">
+            Current state of residence
+            <HelpTooltip content="Your state determines income tax on pension and Social Security income, and is used as your cost-of-living baseline. You can change your retirement state in Step 5." className="ml-1" />
+          </label>
           <select
             className="input-field"
             value={form.currentStateCode}
@@ -196,19 +205,25 @@ export default function Step1Personal() {
 
       {/* Employment type */}
       <div>
-        <label className="label">Employment type</label>
+        <label className="label">
+          Employment type
+          <HelpTooltip content="This determines which retirement formulas apply. Federal FERS/CSRS employees get a pension calculated from salary and service years. Private sector employees rely on 401(k) and Social Security. Select the type that matches your primary career." className="ml-1" />
+        </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {EMPLOYMENT_TYPES.map(opt => (
-            <label key={opt.value} className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-[#2E6DB4] transition-colors">
+            <label key={opt.value} className="flex items-start gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-[#2E6DB4] transition-colors">
               <input
                 type="radio"
                 name="employmentType"
                 value={opt.value}
                 checked={form.employmentType === opt.value}
                 onChange={e => updateField('employmentType', e.target.value)}
-                className="accent-[#2E6DB4]"
+                className="accent-[#2E6DB4] mt-0.5"
               />
-              <span className="text-sm">{opt.label}</span>
+              <div>
+                <div className="text-sm font-medium">{opt.label}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{opt.desc}</div>
+              </div>
             </label>
           ))}
         </div>
@@ -219,7 +234,7 @@ export default function Step1Personal() {
         <div>
           <label className="label">
             Federal retirement category
-            <HelpTooltip content="Law enforcement officers, firefighters, and ATCs have enhanced FERS benefits: 1.7% multiplier for first 20 years and mandatory retirement ages." className="ml-1" />
+            <HelpTooltip content="Law enforcement officers (LEO), firefighters, and air traffic controllers (ATC) have enhanced FERS benefits: a 1.7% multiplier for the first 20 years of service (vs. 1.0% standard), and mandatory retirement ages. DSS = Diplomatic Security Service, which also qualifies." className="ml-1" />
           </label>
           <select
             className="input-field"
@@ -260,15 +275,29 @@ export default function Step1Personal() {
             max={100}
             step={1}
             suffix=" yrs"
+            helpText="SSA average for women is 87. Planning to 92–95 ensures survivor income lasts."
           />
         )}
 
         {isFederal && form.birthYear && (
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <strong>Your MRA:</strong> Age {mra} | <strong>SS earliest:</strong> Age 62 | <strong>Medicare:</strong> Age 65 | <strong>SS FRA:</strong> Age 67
+          <div className="text-sm text-gray-600 dark:text-gray-400 space-y-0.5">
+            <div>
+              <strong>MRA (Minimum Retirement Age):</strong> Age {mra} — earliest you can retire with full FERS benefits
+            </div>
+            <div>
+              <strong>SS earliest:</strong> Age 62 — earliest Social Security claim (reduced benefit) |{' '}
+              <strong>Medicare:</strong> Age 65 |{' '}
+              <strong>SS Full Retirement Age (FRA):</strong> Age 67
+            </div>
           </div>
         )}
       </div>
+
+      <HelpAccordion title="FERS vs CSRS — what's the difference?">
+        <p><strong>FERS (Federal Employees Retirement System)</strong> — covers federal employees hired on or after Jan 1, 1984. It's a three-part system: (1) a modest pension, (2) TSP (the federal 401k with employer match), and (3) Social Security. Most current federal employees are FERS.</p>
+        <p className="mt-2"><strong>CSRS (Civil Service Retirement System)</strong> — covers employees hired before 1984 who did not switch to FERS. It has a much larger pension formula (up to 80% of High-3) but <em>no Social Security</em> and no employer TSP match.</p>
+        <p className="mt-2"><strong>FERS-RAE</strong> — "Revised Annuity Employees." Applies to employees hired on or after Jan 1, 2013. Identical to standard FERS except employee contributions are slightly higher.</p>
+      </HelpAccordion>
     </div>
   )
 }

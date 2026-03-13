@@ -57,12 +57,15 @@ export default function Step2Service() {
         </div>
 
         <div>
-          <label className="label">Retirement system</label>
+          <label className="label">
+            Retirement system
+            <HelpTooltip content="FERS (hired 1984+): pension + TSP match + Social Security. FERS-RAE (hired Jan 2013+): same as FERS but slightly higher employee contribution. CSRS (hired before 1984): larger pension (up to 80% of High-3), no Social Security. CSRS-Offset: hybrid — CSRS pension partially offset by Social Security you'll receive." className="ml-1" />
+          </label>
           <select className="input-field" value={form.retirementSystem} onChange={e => updateField('retirementSystem', e.target.value)}>
-            <option value="fers">FERS</option>
-            <option value="fers_rae">FERS-RAE (hired 2013+)</option>
-            <option value="csrs">CSRS</option>
-            <option value="csrs_offset">CSRS-Offset</option>
+            <option value="fers">FERS (hired 1984–2012)</option>
+            <option value="fers_rae">FERS-RAE (hired Jan 2013+)</option>
+            <option value="csrs">CSRS (hired before 1984)</option>
+            <option value="csrs_offset">CSRS-Offset (CSRS with partial SS)</option>
           </select>
           {form.birthYear && !isCSRS && (
             <p className="help-text">Your MRA (Minimum Retirement Age): <strong>{mraDisplay}</strong></p>
@@ -202,13 +205,16 @@ export default function Step2Service() {
 
       {/* Military service */}
       <div>
-        <label className="label">Military service</label>
+        <label className="label">
+          Military service
+          <HelpTooltip content="If you served on active duty before joining a federal civilian agency, you can count those years toward your FERS pension by paying a 'military deposit' — typically 3% of your military basic pay. If the deposit is paid before you retire, those years add to your creditable service. If not paid, they are excluded from your pension calculation." className="ml-1" />
+        </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {[
             { value: 'none', label: 'No military service' },
-            { value: 'no_credit', label: 'Active duty — no FERS credit' },
-            { value: 'deposit_paid', label: 'Military deposit paid ✓' },
-            { value: 'deposit_progress', label: 'Military deposit in progress' },
+            { value: 'no_credit', label: 'Active duty — no FERS credit (deposit not planned)' },
+            { value: 'deposit_paid', label: 'Military deposit paid ✓ (years count toward pension)' },
+            { value: 'deposit_progress', label: 'Military deposit in progress (will count when paid)' },
           ].map(opt => (
             <label key={opt.value} className="flex items-center gap-2 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-[#2E6DB4] transition-colors text-sm">
               <input type="radio" name="militaryService" value={opt.value} checked={form.militaryService === opt.value} onChange={e => updateField('militaryService', e.target.value)} className="accent-[#2E6DB4]" />
@@ -286,7 +292,7 @@ export default function Step2Service() {
           max={5}
           step={0.1}
           suffix="%"
-          helpText="Average federal GS step/grade increase is ~1–2%/yr."
+          helpText="Federal GS (General Schedule) step and grade increases average ~1–2%/yr. Include expected promotions if applicable."
           presets={[{ label: '0.5%', value: 0.5 }, { label: '1%', value: 1 }, { label: '2%', value: 2 }, { label: '3%', value: 3 }]}
         />
 

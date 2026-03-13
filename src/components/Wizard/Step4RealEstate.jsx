@@ -1,6 +1,6 @@
 import { useForm } from '../../context/AppContext.jsx'
 import { SliderWithInput } from '../common/SliderWithInput.jsx'
-import { HelpTooltip } from '../common/HelpTooltip.jsx'
+import { HelpTooltip, HelpAccordion } from '../common/HelpTooltip.jsx'
 import { VA_RATING_OPTIONS, getVAMonthlyBenefit, getVARatingLabel } from '../../data/vaBenefitTable.js'
 import { formatCurrency } from '../../utils/formatters.js'
 
@@ -9,7 +9,7 @@ const HOME_PLANS = [
   { value: 'sell_buy', label: 'Sell and buy retirement home' },
   { value: 'sell_rent', label: 'Sell and rent in retirement' },
   { value: 'keep_rent', label: 'Keep and rent out for income' },
-  { value: 'reverse', label: 'Reverse mortgage' },
+  { value: 'reverse', label: 'Reverse mortgage (borrow against equity, age 62+)' },
   { value: 'undecided', label: 'Undecided' },
 ]
 
@@ -127,13 +127,16 @@ export default function Step4RealEstate() {
         {form.hasRentalProperty && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { key: 'rentalMonthlyGross', label: 'Monthly gross rent ($)' },
-              { key: 'rentalAnnualExpenses', label: 'Annual expenses ($)' },
-              { key: 'rentalMortgageBalance', label: 'Remaining mortgage ($)' },
-              { key: 'rentalPropertyValue', label: 'Property value ($)' },
+              { key: 'rentalMonthlyGross', label: 'Monthly gross rent ($)', help: 'Total rent collected before any expenses.' },
+              { key: 'rentalAnnualExpenses', label: 'Annual expenses ($)', help: 'Include property taxes, insurance, maintenance (~1% of value/yr), property management fees, and vacancy allowance. Net income = gross rent − expenses.' },
+              { key: 'rentalMortgageBalance', label: 'Remaining mortgage ($)', help: 'Used to calculate your rental property net worth.' },
+              { key: 'rentalPropertyValue', label: 'Property value ($)', help: 'Current market value. Used for legacy/net worth projections.' },
             ].map(f => (
               <div key={f.key}>
-                <label className="label">{f.label}</label>
+                <label className="label">
+                  {f.label}
+                  {f.help && <HelpTooltip content={f.help} className="ml-1" />}
+                </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                   <input type="number" className="input-field pl-7" value={form[f.key] || ''} onChange={e => updateField(f.key, parseFloat(e.target.value) || 0)} placeholder="0" />
@@ -171,11 +174,14 @@ export default function Step4RealEstate() {
             )}
           </div>
           <div>
-            <label className="label">Pursuing VA rating upgrade?</label>
+            <label className="label">
+              Pursuing VA rating upgrade?
+              <HelpTooltip content="Veterans can file a claim for a higher disability rating if their condition has worsened. A rating increase means higher tax-free monthly compensation. For example, going from 70% to 100% roughly triples the monthly benefit." className="ml-1" />
+            </label>
             <select className="input-field" value={form.vaPursuingUpgrade || 'no'} onChange={e => updateField('vaPursuingUpgrade', e.target.value)}>
               <option value="no">No</option>
-              <option value="yes">Yes</option>
-              <option value="in_process">In process</option>
+              <option value="yes">Yes — planning to file</option>
+              <option value="in_process">In process — claim filed</option>
             </select>
           </div>
         </div>
@@ -262,12 +268,22 @@ export default function Step4RealEstate() {
         </div>
 
         <div>
-          <label className="label">Other pension or annuity (annual, $)</label>
-          <div className="relative">
+          <label className="label">
+            Other pension or annuity (annual, $)
+            <HelpTooltip content="Any other guaranteed income source: a state/local government pension, a private sector defined-benefit pension, an annuity you purchased, a trust distribution, or spousal pension. Enter the annual amount in today's dollars." className="ml-1" />
+          </label>
+          <div className="relative md:w-48">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-            <input type="number" className="input-field pl-7 md:w-48" value={form.otherPensionAnnuity || ''} onChange={e => updateField('otherPensionAnnuity', parseFloat(e.target.value) || 0)} placeholder="0" />
+            <input type="number" className="input-field pl-7" value={form.otherPensionAnnuity || ''} onChange={e => updateField('otherPensionAnnuity', parseFloat(e.target.value) || 0)} placeholder="0" />
           </div>
         </div>
+
+        <HelpAccordion title="What is a reverse mortgage?">
+          <p>A <strong>reverse mortgage</strong> (HECM — Home Equity Conversion Mortgage) lets homeowners age 62+ borrow against their home equity without making monthly payments. The loan is repaid when you sell, move out, or pass away.</p>
+          <p className="mt-2"><strong>Pros:</strong> Converts illiquid home equity into monthly income or a lump sum. No payments required while you live there.</p>
+          <p className="mt-2"><strong>Cons:</strong> Reduces the equity available to heirs. Interest accrues over time, growing the loan balance. Requires the home to remain your primary residence and you must maintain it and pay property taxes/insurance.</p>
+          <p className="mt-2">Best suited for retirees who are equity-rich but cash-poor and plan to stay in their home long-term.</p>
+        </HelpAccordion>
       </div>
     </div>
   )

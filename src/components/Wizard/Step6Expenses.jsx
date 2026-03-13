@@ -1,5 +1,6 @@
 import { useForm } from '../../context/AppContext.jsx'
 import { ExpenseField } from '../common/ExpenseField.jsx'
+import { HelpTooltip } from '../common/HelpTooltip.jsx'
 import { EXPENSE_AVERAGES, BUDGET_PRESETS } from '../../utils/expenseCalculations.js'
 import { formatCurrency } from '../../utils/formatters.js'
 
@@ -159,14 +160,23 @@ export default function Step6Expenses() {
       {/* Healthcare */}
       <Section title="🏥 Healthcare">
         <div>
-          <label className="label text-sm">Health insurance type in retirement</label>
+          <label className="label text-sm">
+            Health insurance type in retirement
+            <HelpTooltip content="FEHB: Federal Employee Health Benefits — federal retirees can keep their coverage in retirement, typically ~$500–$700/mo for self+1. Medicare: available at 65, Parts A+B+D average ~$335/mo. ACA Marketplace: for early retirees under 65 who are not federal employees — premiums vary widely by income and state." className="ml-1" />
+          </label>
           <select className="input-field md:w-80 text-sm" value={e.healthInsuranceType || (form.employmentType?.includes('federal') ? 'fehb' : 'marketplace')} onChange={ev => updateExpense('healthInsuranceType', ev.target.value)}>
-            <option value="fehb">FEHB (Federal — retiree)</option>
-            <option value="medicare">Medicare (65+)</option>
-            <option value="spouse">Through spouse employer</option>
-            <option value="marketplace">Marketplace / ACA</option>
-            <option value="expat">Private expat insurance</option>
+            <option value="fehb">FEHB — Federal Employee Health Benefits (retiree)</option>
+            <option value="medicare">Medicare (Parts A+B+D, available at 65)</option>
+            <option value="spouse">Through spouse's employer</option>
+            <option value="marketplace">ACA Marketplace (Affordable Care Act, under 65)</option>
+            <option value="expat">Private expat insurance (international retirement)</option>
           </select>
+          {e.healthInsuranceType === 'marketplace' && (
+            <p className="help-text text-amber-600 dark:text-amber-400 mt-1">Note: ACA premiums are income-sensitive. Lower retirement income may qualify you for subsidies that significantly reduce your cost.</p>
+          )}
+          {e.healthInsuranceType === 'fehb' && (
+            <p className="help-text text-[#1D9E75] mt-1">Federal retirees who maintained FEHB for the last 5 years of service can keep it in retirement. One of the most valuable federal benefits.</p>
+          )}
         </div>
         <ExpenseField label="Health insurance premium" fieldKey="healthInsurance" value={e.healthInsurance || 0} onChange={updateExpense}
           avgAmount={e.healthInsuranceType === 'medicare' ? EXPENSE_AVERAGES.medicareParts : EXPENSE_AVERAGES.fehbSelfPlus1}
