@@ -78,7 +78,7 @@ export default function Dashboard() {
       </div>
 
       {/* Retirement Age Comparison */}
-      <RetirementAgeComparison ssAt62Monthly={calc.ss?.at62Monthly ?? 0} />
+      <RetirementAgeComparison ssAt62Monthly={calc.ss?.at62Monthly ?? 0} ssAtFRAMonthly={calc.ss?.fraMonthly ?? 0} />
 
       {/* Quick stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

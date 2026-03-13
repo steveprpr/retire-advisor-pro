@@ -11,7 +11,16 @@ import { formatCurrency } from '../../utils/formatters.js'
 const CURRENT_YEAR = new Date().getFullYear()
 const CANDIDATE_AGES = [57, 58, 59, 60, 62, 65, 67]
 
-export function RetirementAgeComparison({ ssAt62Monthly = 0 }) {
+// Approximate SS benefit if claimed at a given age (assumes FRA = 67 for born 1960+)
+function ssAtAge(age, fraMonthly) {
+  if (!fraMonthly || age < 62) return 0
+  if (age >= 70) return Math.round(fraMonthly * 1.24)
+  const factorByAge = { 62: 0.70, 63: 0.75, 64: 0.80, 65: 0.867, 66: 0.933, 67: 1.0, 68: 1.08, 69: 1.16 }
+  return Math.round(fraMonthly * (factorByAge[age] ?? 1.0))
+}
+
+export function RetirementAgeComparison({ ssAt62Monthly = 0, ssAtFRAMonthly = 0 }) {
+  const fraMonthly = ssAtFRAMonthly || (ssAt62Monthly ? Math.round(ssAt62Monthly / 0.70) : 0)
   const { form, updateField } = useForm()
 
   const isFederal = form.employmentType === 'federal' || form.employmentType === 'federal_csrs'
@@ -65,20 +74,22 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0 }) {
         projectedSSAt62Monthly: ssAt62Monthly,
       })
 
-      const totalMonthly = (result.netMonthlyAnnuity || 0) + (result.srsMonthly || 0)
+      const ssMonthly = ssAtAge(age, fraMonthly)
+      const totalMonthly = (result.netMonthlyAnnuity || 0) + (result.hasSRS ? (result.srsMonthly || 0) : ssMonthly)
 
       return {
         age,
         serviceYears: typeof serviceYears === 'number' ? serviceYears.toFixed(1) : '--',
         netMonthly: result.netMonthlyAnnuity || 0,
         srsMonthly: result.srsMonthly || 0,
+        ssMonthly,
         totalMonthly,
         penaltyRate: result.penaltyRate || 0,
         hasSRS: result.hasSRS,
         isCurrentTarget: age === (form.targetRetirementAge || 60),
       }
     })
-  }, [ages, form, currentAge, ssAt62Monthly])
+  }, [ages, form, currentAge, fraMonthly])
 
   if (!isFederal) return null
 
@@ -90,8 +101,7 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0 }) {
         <div>
           <h3 className="font-semibold text-[#1B3A6B] dark:text-blue-300">Retirement Age Comparison</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            How your FERS annuity changes by when you retire
-            {!isCSRS && ssAt62Monthly > 0 && ' · SRS shown separately until age 62'}
+            FERS + SRS (before 62) · FERS + Social Security (62+) · all at time of retirement
           </p>
         </div>
         <span className="text-xs text-gray-400 dark:text-gray-600">MRA = {Math.floor(mra)}{mra % 1 > 0 ? `y ${Math.round((mra % 1) * 12)}mo` : ''}</span>
@@ -104,7 +114,7 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0 }) {
               <th className="text-left pb-2 font-medium">Retire at</th>
               <th className="text-right pb-2 font-medium">Service</th>
               <th className="text-right pb-2 font-medium">FERS/mo</th>
-              {!isCSRS && <th className="text-right pb-2 font-medium">SRS/mo</th>}
+              {!isCSRS && <th className="text-right pb-2 font-medium">SRS / SS</th>}
               <th className="text-right pb-2 font-medium">Total/mo</th>
               <th className="text-left pb-2 pl-3 font-medium w-40">Bar</th>
             </tr>
@@ -147,8 +157,20 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0 }) {
                   {formatCurrency(s.netMonthly)}
                 </td>
                 {!isCSRS && (
-                  <td className="py-2 text-right text-green-700 dark:text-green-400">
-                    {s.hasSRS ? formatCurrency(s.srsMonthly) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                  <td className="py-2 text-right">
+                    {s.hasSRS ? (
+                      <span className="text-green-700 dark:text-green-400" title="Special Retirement Supplement (SS bridge)">
+                        {formatCurrency(s.srsMonthly)}
+                        <span className="text-xs text-gray-400 ml-0.5">SRS</span>
+                      </span>
+                    ) : s.ssMonthly > 0 ? (
+                      <span className="text-blue-600 dark:text-blue-400" title="Social Security (if claimed at this age)">
+                        {formatCurrency(s.ssMonthly)}
+                        <span className="text-xs text-gray-400 ml-0.5">SS</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                    )}
                   </td>
                 )}
                 <td className="py-2 text-right font-bold text-[#1B3A6B] dark:text-blue-300">
@@ -169,7 +191,7 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0 }) {
       </div>
 
       <p className="text-xs text-gray-400 dark:text-gray-600">
-        Click any age row to update your target retirement age. Estimates use current salary, growth rate, and service history.
+        Click any age row to update your target retirement age. SRS = SS bridge paid by OPM until age 62. SS shown for 62+ assumes you claim at that age. TSP/savings income not included.
       </p>
     </div>
   )
