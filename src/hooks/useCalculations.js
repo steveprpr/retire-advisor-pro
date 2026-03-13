@@ -128,12 +128,13 @@ export function useCalculations(form, assumptions) {
 
   // ── TSP / 401k projections ───────────────────────────────────────────────
   const tsp = useMemo(() => {
+    // Employer match is simplified: always 100% match rate up to the cap % of salary
     const employerMatchAnnual = computeEmployerMatch({
-      matchType: form.employerMatchType || 'percentage',
+      matchType: 'percentage',
       salary: form.currentSalary || 0,
-      matchPct: (form.employerMatchPct || 5) / 100,
-      matchCapPct: (form.employerMatchCapPct || 5) / 100,
-      fixedAmount: form.employerMatchFixedAmount || 0,
+      matchPct: 1.0,
+      matchCapPct: (form.employerMatchCapPct ?? 5) / 100,
+      fixedAmount: 0,
     })
 
     const projection = computeTSPProjection({
@@ -168,8 +169,7 @@ export function useCalculations(form, assumptions) {
     }
   }, [
     form.tspTraditionalBalance, form.tspRothBalance, form.annualContribTraditional,
-    form.annualContribRoth, form.employerMatchType, form.employerMatchPct,
-    form.employerMatchCapPct, form.employerMatchFixedAmount, form.currentSalary,
+    form.annualContribRoth, form.employerMatchCapPct, form.currentSalary,
     form.withdrawalStrategy, form.dividendETF, form.customDividendYield,
     assumptions.tspReturnRate, assumptions.safeWithdrawalRate,
     assumptions.schdYield, assumptions.vymYield, assumptions.jepYield,

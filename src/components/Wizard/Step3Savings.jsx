@@ -17,12 +17,6 @@ const PLAN_TYPES = [
   { value: 'other', label: 'Other' },
 ]
 
-const MATCH_TYPES = [
-  { value: 'percentage', label: 'Percentage of salary' },
-  { value: 'dollar', label: 'Fixed dollar amount/year' },
-  { value: 'none', label: 'No employer match' },
-]
-
 const DIVIDEND_ETFS = [
   { value: 'SCHD', label: 'SCHD — 3.5% yield (Schwab Dividend)', desc: 'Popular, diversified, 10%/yr dividend growth historically' },
   { value: 'VYM', label: 'VYM — 3.0% yield (Vanguard High Dividend)', desc: 'Broad diversification, low expense ratio' },
@@ -37,14 +31,9 @@ export default function Step3Savings() {
   const isCatchup = currentAge >= 50
   const maxContrib = LIMITS.tsp + (isCatchup ? LIMITS.catchup : 0)
 
-  // Employer match calculation (live)
-  let matchAmount = 0
-  if (form.employerMatchType === 'percentage' && form.currentSalary) {
-    const capPct = (form.employerMatchCapPct || 5) / 100
-    matchAmount = form.currentSalary * capPct * ((form.employerMatchPct || 100) / 100)
-  } else if (form.employerMatchType === 'dollar') {
-    matchAmount = form.employerMatchFixedAmount || 0
-  }
+  // Employer match: always 100% match rate up to the cap % of salary
+  const matchCapPct = form.employerMatchCapPct ?? 5
+  const matchAmount = form.currentSalary ? (form.currentSalary * matchCapPct / 100) : 0
 
   return (
     <div className="space-y-6">
@@ -113,86 +102,32 @@ export default function Step3Savings() {
 
         {/* Employer match */}
         <div>
-          <label className="label">
-            Employer match type
-            <HelpTooltip content="Federal FERS agencies match 5% of salary (1% automatic + 4% matching). Private 401k average match is ~4.3% of salary." className="ml-1" />
-          </label>
-          <div className="flex items-center gap-3 flex-wrap">
-            <select className="input-field md:w-80" value={form.employerMatchType || 'percentage'} onChange={e => updateField('employerMatchType', e.target.value)}>
-              {MATCH_TYPES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
-            {(form.planType === 'tsp' || form.employmentType === 'federal') && (
-              <button
-                type="button"
-                className="btn-ghost text-xs whitespace-nowrap"
-                onClick={() => {
-                  updateField('employerMatchType', 'percentage')
-                  updateField('employerMatchPct', 100)
-                  updateField('employerMatchCapPct', 5)
-                }}
-              >
-                FERS 5% preset
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn-ghost text-xs whitespace-nowrap"
-              onClick={() => {
-                updateField('employerMatchType', 'percentage')
-                updateField('employerMatchPct', 100)
-                updateField('employerMatchCapPct', 10)
-              }}
-            >
-              10% match preset
-            </button>
-          </div>
-          {form.planType === 'tsp' && form.employerMatchType === 'percentage' && form.employerMatchCapPct >= 5 && (
-            <p className="help-text text-[#1D9E75] mt-1">
-              ✓ FERS match: 1% automatic + up to 4% matching = <strong>5% of salary</strong> total
-            </p>
+          <SliderWithInput
+            label={
+              <span>
+                Employer match — % of salary
+                <HelpTooltip content="Federal FERS: 5% (1% automatic + up to 4% matching). Private 401k average: ~4–5%. Set to 0 if no match." className="ml-1" />
+              </span>
+            }
+            value={matchCapPct}
+            onChange={v => updateField('employerMatchCapPct', v)}
+            min={0}
+            max={15}
+            step={0.5}
+            suffix="% of salary"
+            presets={
+              (form.planType === 'tsp' || form.employmentType === 'federal')
+                ? [{ label: 'FERS 5%', value: 5 }, { label: '3%', value: 3 }, { label: 'None', value: 0 }]
+                : [{ label: '3%', value: 3 }, { label: '5%', value: 5 }, { label: 'None', value: 0 }]
+            }
+          />
+          {matchAmount > 0 && (
+            <p className="text-sm text-[#1D9E75] mt-1">✓ Employer will contribute approximately <strong>{formatCurrency(matchAmount)}/year</strong></p>
+          )}
+          {(form.planType === 'tsp' || form.employmentType === 'federal') && matchCapPct >= 5 && (
+            <p className="help-text text-[#1D9E75]">FERS: 1% automatic + up to 4% matching = 5% of salary total</p>
           )}
         </div>
-
-        {form.employerMatchType === 'percentage' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Employer matches % of your contribution</label>
-              <SliderWithInput
-                value={form.employerMatchPct || 100}
-                onChange={v => updateField('employerMatchPct', v)}
-                min={0}
-                max={100}
-                step={1}
-                suffix="% match"
-                helpText="100% = dollar-for-dollar"
-              />
-            </div>
-            <div>
-              <label className="label">Up to this % of salary</label>
-              <SliderWithInput
-                value={form.employerMatchCapPct || 5}
-                onChange={v => updateField('employerMatchCapPct', v)}
-                min={0}
-                max={10}
-                step={0.5}
-                suffix="% of salary"
-                presets={[{ label: '3%', value: 3 }, { label: '4%', value: 4 }, { label: '5%', value: 5 }]}
-              />
-            </div>
-          </div>
-        )}
-        {form.employerMatchType === 'dollar' && (
-          <div>
-            <label className="label">Annual employer contribution ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7 md:w-48" value={form.employerMatchFixedAmount || ''} onChange={e => updateField('employerMatchFixedAmount', parseFloat(e.target.value) || 0)} />
-            </div>
-          </div>
-        )}
-        {matchAmount > 0 && (
-          <p className="text-sm text-[#1D9E75]">✓ Your employer will contribute approximately <strong>{formatCurrency(matchAmount)}/year</strong></p>
-        )}
       </div>
 
       {/* Return rate */}
@@ -569,15 +504,15 @@ function SpouseRetirementSection() {
             </div>
           </div>
           <div>
-            <label className="label">Employer match (% of salary cap)</label>
             <SliderWithInput
-              value={form.spouseEmployerMatchCapPct || 5}
+              label="Employer match — % of salary"
+              value={form.spouseEmployerMatchCapPct ?? 5}
               onChange={v => updateField('spouseEmployerMatchCapPct', v)}
               min={0}
               max={15}
               step={0.5}
               suffix="% of salary"
-              presets={isFederal ? [{ label: 'FERS 5%', value: 5 }] : [{ label: '3%', value: 3 }, { label: '5%', value: 5 }]}
+              presets={isFederal ? [{ label: 'FERS 5%', value: 5 }, { label: 'None', value: 0 }] : [{ label: '3%', value: 3 }, { label: '5%', value: 5 }, { label: 'None', value: 0 }]}
             />
           </div>
         </div>
