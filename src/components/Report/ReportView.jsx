@@ -43,9 +43,10 @@ export default function ReportView() {
   const [copied, setCopied] = useState(false)
 
   const content = ui.reportContent ?? ''
-  const isStreaming = ui.reportStreaming ?? false
-  const isStale = ui.reportStale ?? false
-  const modelUsed = ui.reportModel ?? null
+  const isStreaming = ui.reportGenerating ?? false
+  const isStale = ui.reportIsStale ?? false
+  const modelUsed = ui.reportModelUsed ?? null
+  const reportError = ui.reportError ?? null
 
   const isFederal = form.employmentType === 'federal' || form.employmentType === 'military'
   const isExpat = form.retirementLocationType === 'international'
@@ -168,6 +169,13 @@ export default function ReportView() {
           }
         />
       </div>
+
+      {/* Error banner */}
+      {reportError && (
+        <div className="mb-4 px-4 py-3 bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-300">
+          ⚠️ {reportError}
+        </div>
+      )}
 
       {/* Generate button — when no content yet */}
       {!content && !isStreaming && (

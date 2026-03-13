@@ -36,7 +36,7 @@ export function useReportStream() {
       const response = await fetch('/api/generate-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ payload }),
       })
 
       if (!response.ok) {
@@ -70,14 +70,19 @@ export function useReportStream() {
           if (data.startsWith(':')) continue
           try {
             const parsed = JSON.parse(data)
-            if (parsed.error) {
-              dispatch({ type: 'UI/SET_REPORT_ERROR', error: parsed.error })
+            if (parsed.type === 'error' || parsed.error) {
+              dispatch({ type: 'UI/SET_REPORT_ERROR', error: parsed.message || parsed.error })
               return
             }
-            if (parsed.model) {
+            if (parsed.type === 'done') {
+              dispatch({ type: 'UI/SET_REPORT_GENERATING', value: false })
+              incrementRateCount(RATE_LIMIT_KEY)
+              return
+            }
+            if (parsed.type === 'model' && parsed.model) {
               dispatch({ type: 'UI/SET_REPORT_MODEL', model: parsed.model })
             }
-            if (parsed.content) {
+            if (parsed.type === 'chunk' && parsed.content) {
               dispatch({ type: 'UI/APPEND_REPORT_CONTENT', content: parsed.content })
             }
           } catch {
@@ -131,60 +136,80 @@ export function useQuickInsight() {
 
 // ── Build condensed payload for AI report ────────────────────────────────────
 function buildReportPayload(calc, form) {
-  const { fers, tsp, roth, ss, va, home, expenses, income, taxes, surplus, portfolio, plan529, baseValues } = calc
+  const { fers, tsp, roth, ss, va, home, expenses, income, taxes, surplus, portfolio, baseValues } = calc
+
+  const totalInvestable = (tsp?.totalBalance ?? 0) + (roth?.balance ?? 0)
+  const yearsToRetirement = Math.max(0, (baseValues?.retirementAge ?? 60) - (baseValues?.currentAge ?? 55))
+  const colSavingsPct = expenses?.colMultiplier ? Math.round((1 - expenses.colMultiplier) * 100) : 0
 
   return {
-    // Key context (no PII)
+    // Demographics
     employmentType: form.employmentType,
     retirementSystem: form.retirementSystem,
     specialCategory: form.specialCategory,
-    retirementAge: baseValues.retirementAge,
-    currentAge: baseValues.currentAge,
-    lifeExpectancy: baseValues.lifeExpectancy,
-    yearsInRetirement: baseValues.yearsInRetirement,
+    birthYear: form.birthYear,
+    retirementAge: baseValues?.retirementAge ?? 60,
+    currentAge: baseValues?.currentAge ?? 55,
+    yearsToRetirement,
+    lifeExpectancy: baseValues?.lifeExpectancy ?? 85,
     maritalStatus: form.maritalStatus,
-    retirementLocationType: form.retirementLocationType,
-    retirementStateCode: form.retirementStateCode,
-    retirementCountry: form.retirementCountry,
-    withdrawalStrategy: form.withdrawalStrategy,
-    riskTolerance: form.riskTolerance,
-    biggestConcern: form.biggestConcern,
-    reportDetailLevel: form.reportDetailLevel,
-    specialNotes: form.specialNotes,
+    filingStatus: form.maritalStatus === 'married' ? 'MFJ' : 'single',
 
-    // Key numbers
-    monthlyPension: Math.round(fers.netMonthlyAnnuity),
-    pensionEarlyPenaltyPct: Math.round((fers.penaltyRate || 0) * 100),
-    tspBalanceAtRetirement: Math.round(tsp.totalBalance),
-    tspMonthlyWithdrawal: Math.round(tsp.annualWithdrawal / 12),
-    rothBalanceAtRetirement: Math.round(roth.balance),
-    ssMonthlySelected: Math.round(ss.selectedMonthly),
-    ssClaimingAge: form.ssClaimingStrategy,
-    ssFRA: ss.fra,
-    vaMonthlyBenefit: Math.round(va.monthly),
-    monthlyExpenses: Math.round(expenses.totalMonthlyAtRetirement),
-    afterTaxMonthlyIncomePhase2: Math.round(surplus.afterTaxPhase2 / 12),
-    monthlySurplusPhase2: Math.round(surplus.phase2SurplusMonthly),
-    effectiveTaxRate: Math.round(taxes.overallEffectiveRate * 100),
-    replacementRatio: surplus.replacementRatio,
-    monteCarloSuccessRate: portfolio.monteCarloSuccessRate,  // already 0-100 integer
-    portfolioDepletionYear: portfolio.tspDepletionYear,
-    totalNetWorthAtLE: Math.round(portfolio.totalNetWorthAtLE),
-    perChildInheritance: Math.round(portfolio.perChildInheritance),
-    homeEquityAtRetirement: Math.round(home.netEquity),
-    colMultiplier: Math.round(expenses.colMultiplier * 100),
+    // Monthly income (names match server's buildUserMessage)
+    fersMonthly: Math.round(fers?.netMonthlyAnnuity ?? 0),
+    ssStrategy: form.ssClaimingStrategy ?? 'fra',
+    ssMonthly: Math.round(ss?.selectedMonthly ?? 0),
+    tspMonthly: Math.round((tsp?.annualWithdrawal ?? 0) / 12),
+    vaMonthly: Math.round(va?.monthly ?? 0),
+    rentalMonthly: Math.round(income?.rentalMonthlyNet ?? 0),
+    otherMonthly: Math.round(income?.otherMonthlyIncome ?? 0),
+    totalMonthlyIncome: Math.round(income?.totalMonthlyRetirementIncome ?? 0),
 
-    // Flags for special considerations
-    flags: {
-      isEarlyRetirement: fers.isEarlyRetirement,
-      hasFERSPenalty: (fers.penaltyRate || 0) > 0,
-      hasMilitaryDeposit: form.militaryService === 'deposit_progress',
-      hasVABenefit: va.monthly > 0,
-      isPuertoRican: form.puertoRicanHeritage !== 'neither',
-      retiresToSpain: form.retirementCountryKey === 'spain',
-      backdoorRothNeeded: (form.currentSalary || 0) > 236000,
-      has529: (form.grandchildrenAges || '').trim().length > 0,
-      hasSurvivorAnnuity: form.survivorAnnuityElection !== 'none',
-    },
+    // Expenses
+    totalMonthlyExpenses: Math.round(expenses?.totalMonthlyAtRetirement ?? 0),
+    monthlySurplus: Math.round(surplus?.phase2SurplusMonthly ?? 0),
+    replacementRatio: surplus?.replacementRatio ?? 0,
+
+    // Portfolio
+    tspBalanceAtRetirement: Math.round(tsp?.totalBalance ?? 0),
+    rothBalanceAtRetirement: Math.round(roth?.balance ?? 0),
+    totalInvestableAssets: Math.round(totalInvestable),
+    withdrawalStrategy: form.withdrawalStrategy ?? '4% rule',
+    fourPctWithdrawal: Math.round(totalInvestable * 0.04 / 12),
+    portfolioLongevityYears: portfolio?.longevityYears ?? 0,
+    monteCarloSuccessRate: portfolio?.monteCarloSuccessRate ?? 0,
+
+    // Taxes
+    effectiveTaxRate: Math.round((taxes?.overallEffectiveRate ?? 0) * 100),
+    annualFederalTax: Math.round((taxes?.federalTax ?? 0)),
+    stateCode: form.retirementStateCode ?? form.currentStateCode ?? 'unknown',
+    ssTaxablePortion: Math.round((taxes?.ssTaxablePortion ?? 0) * 100),
+
+    // Real estate & legacy
+    homeEquityAtRetirement: Math.round(home?.netEquity ?? 0),
+    legacyNetWorth: Math.round(portfolio?.totalNetWorthAtLE ?? 0),
+    legacyPriority: form.legacyPriority ?? 'undecided',
+
+    // Location
+    retirementLocation: form.retirementLocationType === 'international'
+      ? `International — ${form.retirementCountry ?? 'unknown'}`
+      : `US — ${form.retirementStateCode ?? 'unknown'}`,
+    countryKey: form.retirementCountryKey ?? null,
+    countryName: form.retirementCountry ?? null,
+    colSavingsPct,
+
+    // Special flags
+    vaRating: form.vaRating ?? 0,
+    militaryBuyback: form.militaryService === 'deposit_progress' || form.militaryService === 'deposit_paid',
+    wepGpoApplies: false,
+    puertoRicanHeritage: false,
+    has529: (form.grandchildrenAges || '').trim().length > 0,
+    plan529Balance: 0,
+    collegeCoverageYears: 0,
+
+    // Report preferences
+    specificConcerns: [form.biggestConcern, form.specialNotes].filter(Boolean).join(' | ') || 'None provided.',
+    reportDetailLevel: form.reportDetailLevel ?? 'standard',
+    riskTolerance: form.riskTolerance ?? 'moderate',
   }
 }
