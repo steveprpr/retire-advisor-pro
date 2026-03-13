@@ -64,19 +64,6 @@ export default function Step1Personal() {
             />
           </label>
           <div className="flex gap-2">
-            <div className="flex-1">
-              <select
-                className="input-field"
-                value={form.birthYear || ''}
-                onChange={e => updateField('birthYear', e.target.value ? parseInt(e.target.value) : null)}
-              >
-                <option value="">Year…</option>
-                {BIRTH_YEARS.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              <p className="help-text text-center">Year</p>
-            </div>
             <div className="w-20">
               <select
                 className="input-field"
@@ -101,6 +88,19 @@ export default function Step1Personal() {
                 max="31"
               />
               <p className="help-text text-center">Day</p>
+            </div>
+            <div className="flex-1">
+              <select
+                className="input-field"
+                value={form.birthYear || ''}
+                onChange={e => updateField('birthYear', e.target.value ? parseInt(e.target.value) : null)}
+              >
+                <option value="">Year…</option>
+                {BIRTH_YEARS.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <p className="help-text text-center">Year</p>
             </div>
           </div>
           {currentAge != null && (
@@ -131,19 +131,6 @@ export default function Step1Personal() {
           <div>
             <label className="label">Spouse date of birth</label>
             <div className="flex gap-2">
-              <div className="flex-1">
-                <select
-                  className="input-field"
-                  value={form.spouseBirthYear || ''}
-                  onChange={e => updateField('spouseBirthYear', e.target.value ? parseInt(e.target.value) : null)}
-                >
-                  <option value="">Year…</option>
-                  {BIRTH_YEARS.map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-                <p className="help-text text-center">Year</p>
-              </div>
               <div className="w-20">
                 <select
                   className="input-field"
@@ -168,6 +155,19 @@ export default function Step1Personal() {
                   max="31"
                 />
                 <p className="help-text text-center">Day</p>
+              </div>
+              <div className="flex-1">
+                <select
+                  className="input-field"
+                  value={form.spouseBirthYear || ''}
+                  onChange={e => updateField('spouseBirthYear', e.target.value ? parseInt(e.target.value) : null)}
+                >
+                  <option value="">Year…</option>
+                  {BIRTH_YEARS.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                <p className="help-text text-center">Year</p>
               </div>
             </div>
             {form.spouseBirthYear && (
