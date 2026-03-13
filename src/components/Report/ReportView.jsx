@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Component } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useUI, useForm, useAssumptions, useAppState } from '../../context/AppContext.jsx'
@@ -213,15 +213,17 @@ export default function ReportView() {
       {content && (
         <div className="space-y-6">
           {/* Interleaved narrative + charts */}
-          <ReportContent
-            content={content}
-            calc={calc}
-            form={form}
-            isFederal={isFederal}
-            isExpat={isExpat}
-            has529={has529}
-            isStreaming={isStreaming}
-          />
+          <ReportErrorBoundary>
+            <ReportContent
+              content={content}
+              calc={calc}
+              form={form}
+              isFederal={isFederal}
+              isExpat={isExpat}
+              has529={has529}
+              isStreaming={isStreaming}
+            />
+          </ReportErrorBoundary>
 
           {/* Regenerate button */}
           {!isStreaming && (
@@ -249,6 +251,34 @@ export default function ReportView() {
   )
 }
 
+// ── Error boundary to catch chart/render crashes ──────────────────────────────
+class ReportErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+          <strong>Rendering error:</strong> {this.state.error?.message || 'Unknown error'}
+          <br />
+          <button
+            className="mt-2 text-xs underline"
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
+            Try again
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 // ── Report Content — splits markdown by section headers and interleaves charts ─
 function ReportContent({ content, calc, form, isFederal, isExpat, has529, isStreaming }) {
   // Split content into sections by ## [N] headers
@@ -265,69 +295,69 @@ function ReportContent({ content, calc, form, isFederal, isExpat, has529, isStre
           </div>
 
           {/* Interleaved charts after specific sections */}
-          {section.anchor === 'chart2income' && (
+          {section.anchor === 'chart2income' && calc && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div className="card p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Income by Source</h4>
-                <Chart1IncomeWaterfall data={calc?.chartData?.incomeWaterfall} />
+                <Chart1IncomeWaterfall calculations={calc} />
               </div>
               <div className="card p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Social Security Strategy</h4>
-                <Chart5SSStrategy data={calc?.chartData?.ssStrategy} form={form} />
+                <Chart5SSStrategy calculations={calc} />
               </div>
             </div>
           )}
 
-          {section.anchor === 'chart4budget' && (
+          {section.anchor === 'chart4budget' && calc && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div className="card p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Expense Breakdown</h4>
-                <Chart3ExpenseBreakdown data={calc?.chartData?.expenseBreakdown} />
+                <Chart3ExpenseBreakdown calculations={calc} />
               </div>
               <div className="card p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Income vs Expenses Over Time</h4>
-                <Chart4IncomeVsExpenses data={calc?.chartData?.incomeVsExpenses} />
+                <Chart4IncomeVsExpenses calculations={calc} />
               </div>
             </div>
           )}
 
-          {section.anchor === 'chart5portfolio' && (
+          {section.anchor === 'chart5portfolio' && calc && (
             <div className="space-y-4 mt-4">
               <div className="card p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Portfolio Growth & Drawdown</h4>
-                <Chart2PortfolioGrowth data={calc?.chartData?.portfolioTimeline} form={form} />
+                <Chart2PortfolioGrowth calculations={calc} />
               </div>
               <div className="card p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Withdrawal Strategy Comparison</h4>
-                <Chart6WithdrawalStrategy data={calc?.chartData?.withdrawalComparison} />
+                <Chart6WithdrawalStrategy calculations={calc} />
               </div>
             </div>
           )}
 
-          {section.anchor === 'chart6location' && isExpat && (
+          {section.anchor === 'chart6location' && isExpat && calc && (
             <div className="card p-4 mt-4">
               <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Cost of Living Comparison</h4>
-              <Chart9COLComparison data={calc?.chartData?.colComparison} form={form} />
+              <Chart9COLComparison calculations={calc} countryName={form.retirementCountry} />
             </div>
           )}
 
-          {section.anchor === 'chart6location' && isFederal && (
+          {section.anchor === 'chart6location' && isFederal && calc && (
             <div className="card p-4 mt-4">
               <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">FERS Retirement Options</h4>
-              <Chart10FERSOptions data={calc?.chartData?.fersOptions} calc={calc} form={form} />
+              <Chart10FERSOptions calculations={calc} />
             </div>
           )}
 
-          {section.anchor === 'chart7legacy' && (
+          {section.anchor === 'chart7legacy' && calc && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div className="card p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Legacy Net Worth</h4>
-                <Chart7Legacy data={calc?.chartData?.legacyNetWorth} />
+                <Chart7Legacy calculations={calc} />
               </div>
               {has529 && (
                 <div className="card p-4">
                   <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">529 College Savings</h4>
-                  <Chart8College529 data={calc?.chartData?.plan529} form={form} />
+                  <Chart8College529 calculations={calc} />
                 </div>
               )}
             </div>

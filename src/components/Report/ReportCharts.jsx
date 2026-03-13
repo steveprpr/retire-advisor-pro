@@ -30,8 +30,10 @@ const tooltipStyle = {
 
 // ── Chart 1: Income Waterfall by Phase ───────────────────────────────────────
 export function Chart1IncomeWaterfall({ calculations }) {
+  if (!calculations?.income || !calculations?.expenses) return null
   const { income, expenses } = calculations
-  const { components } = income
+  const { components } = income || {}
+  if (!components) return null
 
   const data = [
     {
@@ -91,10 +93,11 @@ export function Chart1IncomeWaterfall({ calculations }) {
 
 // ── Chart 2: Portfolio Growth & Drawdown ────────────────────────────────────
 export function Chart2PortfolioGrowth({ calculations }) {
+  if (!calculations?.baseValues) return null
   const { chartData, baseValues } = calculations
   const data = chartData?.timeline || []
   const currentYear = new Date().getFullYear()
-  const retirementYear = currentYear + baseValues.yearsToRetirement
+  const retirementYear = currentYear + (baseValues.yearsToRetirement || 0)
 
   return (
     <ChartCard title="Portfolio Growth & Drawdown">
@@ -127,6 +130,7 @@ export function Chart2PortfolioGrowth({ calculations }) {
 
 // ── Chart 3: Expense Breakdown (Donut) ────────────────────────────────────────
 export function Chart3ExpenseBreakdown({ calculations }) {
+  if (!calculations?.expenses) return null
   const { expenses } = calculations
   const cats = expenses.categories || {}
 
@@ -164,6 +168,7 @@ export function Chart3ExpenseBreakdown({ calculations }) {
 
 // ── Chart 4: Income vs Expenses Over Time ────────────────────────────────────
 export function Chart4IncomeVsExpenses({ calculations }) {
+  if (!calculations?.baseValues || !calculations?.surplus || !calculations?.expenses) return null
   const { baseValues, surplus, expenses, income } = calculations
   const data = []
   const startAge = baseValues.retirementAge
@@ -201,6 +206,7 @@ export function Chart4IncomeVsExpenses({ calculations }) {
 
 // ── Chart 5: Social Security Strategy ───────────────────────────────────────
 export function Chart5SSStrategy({ calculations }) {
+  if (!calculations?.ss) return null
   const { ss, baseValues } = calculations
   if (!ss.fraMonthly && ss.fraMonthly !== 0) return null
 
@@ -247,6 +253,7 @@ export function Chart5SSStrategy({ calculations }) {
 
 // ── Chart 6: Withdrawal Strategy Comparison ─────────────────────────────────
 export function Chart6WithdrawalStrategy({ calculations }) {
+  if (!calculations?.tsp || !calculations?.portfolio) return null
   const { tsp, portfolio, baseValues } = calculations
 
   const data = [
@@ -281,6 +288,7 @@ export function Chart6WithdrawalStrategy({ calculations }) {
 
 // ── Chart 7: Legacy / Net Worth at Life Expectancy ───────────────────────────
 export function Chart7Legacy({ calculations }) {
+  if (!calculations?.portfolio || !calculations?.home || !calculations?.baseValues) return null
   const { portfolio, home } = calculations
 
   const data = [{
@@ -323,6 +331,7 @@ export function Chart7Legacy({ calculations }) {
 
 // ── Chart 8: 529 College Savings ─────────────────────────────────────────────
 export function Chart8College529({ calculations }) {
+  if (!calculations?.plan529) return null
   const { plan529 } = calculations
   if (!plan529?.grandchildren?.length) return null
 
@@ -362,8 +371,8 @@ export function Chart8College529({ calculations }) {
 
 // ── Chart 9: COL Comparison (Expat) ─────────────────────────────────────────
 export function Chart9COLComparison({ calculations, countryName }) {
+  if (!calculations?.expenses || !countryName) return null
   const { expenses } = calculations
-  if (!countryName) return null
 
   const cats = expenses.categories || {}
   const colMultiplier = expenses.colMultiplier || 1.0
@@ -400,6 +409,7 @@ export function Chart9COLComparison({ calculations, countryName }) {
 
 // ── Chart 10: FERS Options Comparison ────────────────────────────────────────
 export function Chart10FERSOptions({ calculations }) {
+  if (!calculations?.fers) return null
   const { fers } = calculations
   if (!fers?.fersOptions) return null
 
