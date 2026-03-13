@@ -25,6 +25,10 @@ export default function Step5Goals() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        When and where you retire changes everything — your FERS annuity, Social Security strategy, taxes, and cost of living. This step locks in your retirement vision so the rest of your plan can be built around it.
+      </p>
+
       {/* Target retirement age */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Target retirement age</h3>

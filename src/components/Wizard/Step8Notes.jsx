@@ -28,6 +28,10 @@ export default function Step8Notes() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        These final preferences tell the AI how to tailor your report — how much risk you can stomach, what keeps you up at night, and any special circumstances that numbers alone can't capture. The more context you share, the more useful the analysis.
+      </p>
+
       {/* Risk tolerance */}
       <div>
         <label className="label text-base">Risk tolerance</label>

@@ -53,6 +53,10 @@ export default function Step6Expenses() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Your monthly spending in retirement determines whether your income covers your lifestyle — or falls short. Enter everything in today's dollars; inflation is applied automatically. Use a budget preset to get started quickly, then fine-tune each line.
+      </p>
+
       {/* Running total sticky bar */}
       <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 py-3 -mx-4 px-4">
         <div className="flex items-center justify-between">

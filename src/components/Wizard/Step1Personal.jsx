@@ -38,6 +38,10 @@ export default function Step1Personal() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        These basics drive every calculation in your plan — your age determines your Minimum Retirement Age (MRA) and Social Security timeline, your state affects taxes, and your employment type unlocks the right benefit formulas.
+      </p>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Year of Birth */}
         <div>

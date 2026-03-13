@@ -48,6 +48,10 @@ export default function Step3Savings() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Your savings and investments are the engine of your retirement. This step captures everything you're building — TSP/401k, Roth IRA, brokerage, HSA, and spouse savings — so we can project your total wealth at retirement and model how long it will last.
+      </p>
+
       {/* Plan type */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

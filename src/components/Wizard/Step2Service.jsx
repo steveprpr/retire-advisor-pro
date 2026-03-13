@@ -33,6 +33,10 @@ export default function Step2Service() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Your service history and salary are the core inputs for your FERS annuity — the pension you'll receive every month for life. The more accurate these numbers are, the more reliable your retirement income estimate will be.
+      </p>
+
       {/* Agency */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -279,6 +283,10 @@ function PrivateSectorSection() {
   const { form, updateField } = useForm()
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Your salary and any employer pension help us estimate your income floor in retirement. Even without a traditional pension, this step captures what you're earning now so projections stay accurate.
+      </p>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="label">Current employer (optional)</label>

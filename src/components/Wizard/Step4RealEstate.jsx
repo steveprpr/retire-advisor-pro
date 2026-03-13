@@ -21,6 +21,10 @@ export default function Step4RealEstate() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Real estate and other income sources can meaningfully reduce how much you need to draw from savings. Tell us about your home, any rental income, VA disability benefits, and other money coming in so your plan reflects your full financial picture.
+      </p>
+
       {/* Primary home */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Primary home</h3>

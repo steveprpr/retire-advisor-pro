@@ -8,6 +8,10 @@ export default function Step7Legacy() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Legacy planning shapes how aggressively you spend in retirement and what protections you put in place. Tell us about your children, grandchildren, and inheritance goals so the report can model what you'll leave behind — and how to get there.
+      </p>
+
       {/* Family */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Family</h3>
