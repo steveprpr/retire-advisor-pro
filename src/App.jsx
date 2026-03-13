@@ -46,11 +46,17 @@ function AppShell() {
     return <CodeGate />
   }
 
+  const openAssumptions = () => dispatch({ type: 'UI/TOGGLE_ASSUMPTIONS_PANEL' })
+
   // ── Wizard ──────────────────────────────────────────────────────────────────
   if (!wizardComplete) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <AppHeader onToggleDark={toggleDark} darkMode={ui.darkMode} />
+        <AppHeader
+          onToggleDark={toggleDark}
+          darkMode={ui.darkMode}
+          wizardComplete={false}
+        />
         <main>
           <WizardShell />
         </main>
@@ -69,9 +75,9 @@ function AppShell() {
           showTabs
           activeTab={activeTab}
           onTabChange={setTab}
-          onEditInputs={() => {
-            dispatch({ type: 'UI/REOPEN_WIZARD' })
-          }}
+          wizardComplete={true}
+          onEditInputs={() => dispatch({ type: 'UI/REOPEN_WIZARD' })}
+          onOpenAssumptions={openAssumptions}
         />
 
         <main className="pb-16">
@@ -87,13 +93,21 @@ function AppShell() {
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
-function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, onEditInputs }) {
+function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, onEditInputs, onOpenAssumptions, wizardComplete }) {
+  const { dispatch } = useUI()
+
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 no-print">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-[#1B3A6B] rounded-lg flex items-center justify-center flex-shrink-0">
+      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+
+        {/* Logo — always clickable, returns to Dashboard if wizard is done */}
+        <button
+          type="button"
+          onClick={() => wizardComplete && onTabChange?.('dashboard')}
+          className={`flex items-center gap-2 flex-shrink-0 ${wizardComplete ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+          title={wizardComplete ? 'Go to Dashboard' : 'RetireAdvisor Pro'}
+        >
+          <div className="w-7 h-7 bg-[#1B3A6B] rounded-lg flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M2 13 L8 3 L14 13" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M4.5 9.5 L11.5 9.5" stroke="#1D9E75" strokeWidth="1.5" strokeLinecap="round"/>
@@ -102,29 +116,47 @@ function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, o
           <span className="font-bold text-[#1B3A6B] dark:text-blue-300 text-sm hidden sm:block">
             RetireAdvisor Pro
           </span>
-        </div>
+        </button>
 
-        {/* Tab navigation */}
+        {/* Main nav — only shown after wizard */}
         {showTabs && (
-          <nav className="flex items-center gap-1">
-            <TabBtn active={activeTab === 'dashboard'} onClick={() => onTabChange('dashboard')}>
-              Dashboard
-            </TabBtn>
-            <TabBtn active={activeTab === 'report'} onClick={() => onTabChange('report')}>
+          <nav className="flex items-center gap-1 flex-1 justify-center">
+            <NavBtn
+              active={activeTab === 'dashboard'}
+              onClick={() => onTabChange('dashboard')}
+              icon="📊"
+            >
+              Home
+            </NavBtn>
+            <NavBtn
+              active={activeTab === 'report'}
+              onClick={() => onTabChange('report')}
+              icon="📄"
+            >
               Report
-            </TabBtn>
+            </NavBtn>
+            <NavBtn
+              active={false}
+              onClick={onOpenAssumptions}
+              icon="⚙️"
+            >
+              <span className="hidden sm:inline">Assumptions</span>
+              <span className="sm:hidden">⚙️</span>
+            </NavBtn>
           </nav>
         )}
 
         {/* Right controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {showTabs && onEditInputs && (
             <button
               type="button"
               onClick={onEditInputs}
-              className="btn-ghost text-xs hidden sm:block"
+              className="btn-ghost text-xs flex items-center gap-1"
+              title="Return to wizard to edit your inputs"
             >
-              ← Edit Inputs
+              <span className="hidden sm:inline">✏️ Edit Inputs</span>
+              <span className="sm:hidden">✏️</span>
             </button>
           )}
           <button
@@ -141,19 +173,20 @@ function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, o
   )
 }
 
-function TabBtn({ active, onClick, children }) {
+function NavBtn({ active, onClick, icon, children }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+        'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1',
         active
           ? 'bg-[#1B3A6B] text-white dark:bg-blue-800'
           : 'text-gray-600 dark:text-gray-400 hover:text-[#1B3A6B] dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-800',
       ].join(' ')}
     >
-      {children}
+      <span className="hidden sm:inline">{children}</span>
+      <span className="sm:hidden">{icon}</span>
     </button>
   )
 }
