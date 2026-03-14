@@ -127,6 +127,11 @@ export default function Step1Personal() {
             <option value="divorced">Divorced</option>
             <option value="widowed">Widowed</option>
           </select>
+          {form.maritalStatus === 'divorced' && (
+            <p className="help-text text-[#2E6DB4] mt-1">
+              ⚖️ If a court order (QDRO/COAP) divides your pension or savings with a former spouse, you'll enter those details in <strong>Step 2</strong>.
+            </p>
+          )}
         </div>
 
         {/* Spouse date of birth (if married) */}

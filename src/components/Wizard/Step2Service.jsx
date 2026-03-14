@@ -11,6 +11,7 @@ export default function Step2Service() {
   const { form, updateField } = useForm()
   const isFederal = form.employmentType === 'federal' || form.employmentType === 'federal_csrs'
   const isCSRS = form.employmentType === 'federal_csrs' || form.retirementSystem === 'csrs'
+  const isDivorced = form.maritalStatus === 'divorced'
 
   const currentAge = form.birthYear ? CURRENT_YEAR - form.birthYear : 55
   const mraDisplay = getMRADisplay(form.birthYear)
@@ -30,7 +31,7 @@ export default function Step2Service() {
   )
 
   if (!isFederal) {
-    return <PrivateSectorSection />
+    return <PrivateSectorSection isDivorced={isDivorced} />
   }
 
   return (
@@ -38,6 +39,9 @@ export default function Step2Service() {
       <p className="text-sm text-gray-600 dark:text-gray-400">
         Your service history and salary are the core inputs for your FERS annuity — the pension you'll receive every month for life. The more accurate these numbers are, the more reliable your retirement income estimate will be.
       </p>
+
+      {/* Divorce court order — shown prominently at top when divorced */}
+      {isDivorced && <DivorceCourtOrderSection isFederal={true} isDivorced={true} />}
 
       {/* Agency */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -327,18 +331,20 @@ export default function Step2Service() {
         <p className="mt-2">Example: $95,000 High-3 × 25 years × 1.1% = <strong>$26,125/year ($2,177/month)</strong></p>
       </HelpAccordion>
 
-      <DivorceCourtOrderSection isFederal={true} />
+      {!isDivorced && <DivorceCourtOrderSection isFederal={true} isDivorced={false} />}
     </div>
   )
 }
 
-function PrivateSectorSection() {
+function PrivateSectorSection({ isDivorced }) {
   const { form, updateField } = useForm()
   return (
     <div className="space-y-6">
       <p className="text-sm text-gray-600 dark:text-gray-400">
         Your salary and any employer pension help us estimate your income floor in retirement. Even without a traditional pension, this step captures what you're earning now so projections stay accurate.
       </p>
+
+      {isDivorced && <DivorceCourtOrderSection isFederal={false} isDivorced={true} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -394,22 +400,27 @@ function PrivateSectorSection() {
         )}
       </div>
 
-      <DivorceCourtOrderSection isFederal={false} />
+      {!isDivorced && <DivorceCourtOrderSection isFederal={false} isDivorced={false} />}
     </div>
   )
 }
 
 // ── Divorce / Court Order Section ────────────────────────────────────────────
-function DivorceCourtOrderSection({ isFederal }) {
+function DivorceCourtOrderSection({ isFederal, isDivorced }) {
   const { form, updateField } = useForm()
-  const termFull = isFederal ? 'COAP (Court Order Acceptable for Processing)' : 'QDRO (Qualified Domestic Relations Order)'
   const termShort = isFederal ? 'COAP' : 'QDRO'
 
+  // When user selected "divorced" in Step 1, section is always expanded
+  const isExpanded = isDivorced || form.hasDivorceCOAP
+
   return (
-    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
+    <div className={`p-4 rounded-xl space-y-4 ${isDivorced
+      ? 'bg-blue-50 dark:bg-blue-950/40 border border-[#2E6DB4]/30'
+      : 'bg-gray-50 dark:bg-gray-900'}`}>
       <div className="flex items-center gap-2">
+        <span className="text-base">⚖️</span>
         <h3 className="font-medium text-gray-800 dark:text-gray-200">
-          Divorce &amp; court-ordered benefit division
+          Court-ordered benefit division ({termShort})
         </h3>
         <HelpTooltip
           content={isFederal
@@ -419,18 +430,26 @@ function DivorceCourtOrderSection({ isFederal }) {
         />
       </div>
 
-      <label className="flex items-center gap-3 cursor-pointer text-sm">
-        <input
-          type="checkbox"
-          checked={form.hasDivorceCOAP}
-          onChange={e => updateField('hasDivorceCOAP', e.target.checked)}
-          className="accent-[#2E6DB4]"
-        />
-        <span>A {termShort} divides my retirement benefits with a former spouse</span>
-      </label>
+      {!isDivorced && (
+        <label className="flex items-center gap-3 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            checked={form.hasDivorceCOAP}
+            onChange={e => updateField('hasDivorceCOAP', e.target.checked)}
+            className="accent-[#2E6DB4]"
+          />
+          <span>A {termShort} divides my retirement benefits with a former spouse</span>
+        </label>
+      )}
 
-      {form.hasDivorceCOAP && (
-        <div className="space-y-4 ml-6">
+      {isDivorced && (
+        <p className="text-sm text-[#1B3A6B] dark:text-blue-300">
+          Since you're divorced, enter any court-ordered division of your retirement benefits below. Leave pension share at 0 if no pension division was ordered.
+        </p>
+      )}
+
+      {isExpanded && (
+        <div className="space-y-4 ml-0">
 
           {/* Pension share */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
