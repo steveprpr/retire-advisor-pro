@@ -18,6 +18,12 @@ const initialForm = {
   lifeExpectancy: 90,
   spouseLifeExpectancy: 92,
 
+  // Divorce / Court Order (QDRO for private; COAP for federal)
+  hasDivorceCOAP: false,
+  divorceAnnuitySharePct: 0,          // % of gross pension awarded to former spouse
+  divorceTSPDivision: 'already_done', // 'already_done' | 'at_retirement'
+  divorceTSPSharePct: 0,              // % of account balance if split happens at retirement
+
   // Step 2 — Service & Salary
   // Federal fields
   agency: '',

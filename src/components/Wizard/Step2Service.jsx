@@ -326,6 +326,8 @@ export default function Step2Service() {
         <p className="mt-2">Formula: <strong>High-3 × creditable service years × 1.0% (or 1.1% if retiring at 62+ with 20+ years)</strong></p>
         <p className="mt-2">Example: $95,000 High-3 × 25 years × 1.1% = <strong>$26,125/year ($2,177/month)</strong></p>
       </HelpAccordion>
+
+      <DivorceCourtOrderSection isFederal={true} />
     </div>
   )
 }
@@ -391,6 +393,124 @@ function PrivateSectorSection() {
           </div>
         )}
       </div>
+
+      <DivorceCourtOrderSection isFederal={false} />
+    </div>
+  )
+}
+
+// ── Divorce / Court Order Section ────────────────────────────────────────────
+function DivorceCourtOrderSection({ isFederal }) {
+  const { form, updateField } = useForm()
+  const termFull = isFederal ? 'COAP (Court Order Acceptable for Processing)' : 'QDRO (Qualified Domestic Relations Order)'
+  const termShort = isFederal ? 'COAP' : 'QDRO'
+
+  return (
+    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
+      <div className="flex items-center gap-2">
+        <h3 className="font-medium text-gray-800 dark:text-gray-200">
+          Divorce &amp; court-ordered benefit division
+        </h3>
+        <HelpTooltip
+          content={isFederal
+            ? "A COAP (Court Order Acceptable for Processing) is OPM's version of a QDRO. A divorce decree may award your former spouse a percentage of your FERS/CSRS annuity and/or a share of your TSP balance. The pension share permanently reduces your monthly take-home annuity."
+            : "A QDRO (Qualified Domestic Relations Order) directs a retirement plan administrator to pay a portion of your 401k or pension to a former spouse. The pension portion reduces your monthly benefit; the 401k portion may have been split at divorce (reducing your current balance) or may be split when you retire."}
+          className="ml-1"
+        />
+      </div>
+
+      <label className="flex items-center gap-3 cursor-pointer text-sm">
+        <input
+          type="checkbox"
+          checked={form.hasDivorceCOAP}
+          onChange={e => updateField('hasDivorceCOAP', e.target.checked)}
+          className="accent-[#2E6DB4]"
+        />
+        <span>A {termShort} divides my retirement benefits with a former spouse</span>
+      </label>
+
+      {form.hasDivorceCOAP && (
+        <div className="space-y-4 ml-6">
+
+          {/* Pension share */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <div>
+              <label className="label">
+                Former spouse's share of monthly pension
+                <HelpTooltip
+                  content="Enter the percentage of your gross monthly pension awarded to your former spouse. Example: if the decree awards your ex 30% of your $3,000/month pension, enter 30 — your take-home becomes $2,100/month."
+                  className="ml-1"
+                />
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  className="input-field w-24"
+                  value={form.divorceAnnuitySharePct || ''}
+                  onChange={e => updateField('divorceAnnuitySharePct', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                  step="1"
+                />
+                <span className="text-sm text-gray-500">% of gross pension</span>
+              </div>
+            </div>
+            {form.divorceAnnuitySharePct > 0 && (
+              <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+                Your pension calculation will be reduced by <strong>{form.divorceAnnuitySharePct}%</strong>. The former spouse's portion does not count as your income.
+              </div>
+            )}
+          </div>
+
+          {/* TSP / 401k split */}
+          <div className="space-y-2">
+            <label className="label">
+              401k / TSP split
+              <HelpTooltip
+                content="Most QDROs/COAPs are processed at the time of divorce — the account is split and your current balance already reflects your share. If your order will be executed when you retire, enter the percentage and we'll reduce your projected retirement balance."
+                className="ml-1"
+              />
+            </label>
+            {[
+              { value: 'already_done', label: 'Already divided — my current account balance reflects my share' },
+              { value: 'at_retirement', label: 'Will be divided at retirement — specify percentage below' },
+            ].map(opt => (
+              <label key={opt.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="divorceTSPDivision"
+                  value={opt.value}
+                  checked={form.divorceTSPDivision === opt.value}
+                  onChange={e => updateField('divorceTSPDivision', e.target.value)}
+                  className="accent-[#2E6DB4]"
+                />
+                {opt.label}
+              </label>
+            ))}
+            {form.divorceTSPDivision === 'at_retirement' && (
+              <div className="flex items-center gap-2 ml-6 mt-1">
+                <input
+                  type="number"
+                  className="input-field w-24"
+                  value={form.divorceTSPSharePct || ''}
+                  onChange={e => updateField('divorceTSPSharePct', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                  step="1"
+                />
+                <span className="text-sm text-gray-500">% of projected balance goes to former spouse</span>
+              </div>
+            )}
+          </div>
+
+          {/* SS note */}
+          <p className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 rounded-lg p-2.5">
+            <strong>Social Security note:</strong> A former spouse married to you for 10+ years can claim SS benefits based on your record — but this does not reduce your own SS benefit. No input is needed here for SS.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

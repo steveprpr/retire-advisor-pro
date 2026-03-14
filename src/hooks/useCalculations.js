@@ -51,14 +51,17 @@ export function useCalculations(form, assumptions) {
   // ── FERS / Pension calculations ──────────────────────────────────────────
   const fers = useMemo(() => {
     if (!baseValues.isFederal) {
-      // Private sector pension
-      const monthlyPension = form.hasPension ? (form.pensionMonthlyAmount || 0) : 0
+      // Private sector pension — apply QDRO reduction if applicable
+      const grossMonthly = form.hasPension ? (form.pensionMonthlyAmount || 0) : 0
+      const qdroAnnuityPct = (form.hasDivorceCOAP && form.divorceAnnuitySharePct > 0)
+        ? Math.min(1, form.divorceAnnuitySharePct / 100) : 0
+      const monthlyPension = grossMonthly * (1 - qdroAnnuityPct)
       return {
         mra: 57, mraDisplay: '57',
         netMonthlyAnnuity: monthlyPension,
         netAnnualAnnuity: monthlyPension * 12,
         monthlyAnnuity: monthlyPension,
-        grossAnnuity: monthlyPension * 12,
+        grossAnnuity: grossMonthly * 12,
         penaltyRate: 0, penaltyYears: 0,
         isEarlyRetirement: false, hasSRS: false, srsMonthly: 0,
         options: {
@@ -67,6 +70,7 @@ export function useCalculations(form, assumptions) {
           postpone62: { annual: monthlyPension * 12, monthly: monthlyPension, srsMonthly: 0, note: '' },
         },
         totalService: 0, isPension: true, high3: 0, serviceYears: 0,
+        coapPct: qdroAnnuityPct, coapMonthlyReduction: grossMonthly * qdroAnnuityPct,
       }
     }
 
@@ -116,7 +120,20 @@ export function useCalculations(form, assumptions) {
       baseValues.lifeExpectancy,
     )
 
-    return { ...result, fersOptions, isPension: false, high3, serviceYears }
+    // Apply COAP (court order) pension reduction for divorced employees
+    const coapPct = (form.hasDivorceCOAP && form.divorceAnnuitySharePct > 0)
+      ? Math.min(1, form.divorceAnnuitySharePct / 100) : 0
+    const coapMonthlyReduction = result.netMonthlyAnnuity * coapPct
+    const netMonthlyAfterCOAP = result.netMonthlyAnnuity - coapMonthlyReduction
+
+    return {
+      ...result,
+      fersOptions, isPension: false, high3, serviceYears,
+      netMonthlyAnnuity: netMonthlyAfterCOAP,
+      netAnnualAnnuity: netMonthlyAfterCOAP * 12,
+      coapPct,
+      coapMonthlyReduction,
+    }
   }, [
     baseValues.isFederal, baseValues.retirementAge, baseValues.lifeExpectancy, baseValues.currentAge,
     form.high3Salary, form.high3Override, form.high3FreezeAge,
@@ -124,6 +141,7 @@ export function useCalculations(form, assumptions) {
     form.credibleServiceYears, form.serviceYearsMode, form.militaryService, form.militaryServiceYears,
     form.survivorAnnuityElection, form.retirementSystem, form.specialCategory, form.birthYear,
     form.hasPension, form.pensionMonthlyAmount, form.careerStartAge, form.ssWorkHistory30plus,
+    form.hasDivorceCOAP, form.divorceAnnuitySharePct,
   ])
 
   // ── TSP / 401k projections ───────────────────────────────────────────────
@@ -154,8 +172,13 @@ export function useCalculations(form, assumptions) {
       : form.dividendETF === 'JEPI' ? assumptions.jepYield
       : (form.customDividendYield || assumptions.schdYield)
 
-    const fourPctIncome = computeFourPercentRule(projection.totalBalance, assumptions.safeWithdrawalRate)
-    const dividendIncome = computeDividendIncome(projection.totalBalance, selectedYield)
+    // Apply QDRO reduction if the TSP split happens at retirement (not already done)
+    const qdroReductionPct = (form.hasDivorceCOAP && form.divorceTSPDivision === 'at_retirement')
+      ? Math.min(1, (form.divorceTSPSharePct || 0) / 100) : 0
+    const effectiveTotalBalance = projection.totalBalance * (1 - qdroReductionPct)
+
+    const fourPctIncome = computeFourPercentRule(effectiveTotalBalance, assumptions.safeWithdrawalRate)
+    const dividendIncome = computeDividendIncome(effectiveTotalBalance, selectedYield)
 
     return {
       ...projection,
@@ -163,14 +186,17 @@ export function useCalculations(form, assumptions) {
       fourPctIncome,
       dividendIncome,
       selectedYield,
-      balanceAtRetirement: projection.totalBalance,
+      totalBalance: effectiveTotalBalance,
+      balanceAtRetirement: effectiveTotalBalance,
       annualWithdrawal: form.withdrawalStrategy === 'dividend' ? dividendIncome : fourPctIncome,
       monthlyWithdrawal: (form.withdrawalStrategy === 'dividend' ? dividendIncome : fourPctIncome) / 12,
+      qdroReductionPct,
     }
   }, [
     form.tspTraditionalBalance, form.tspRothBalance, form.annualContribTraditional,
     form.annualContribRoth, form.employerMatchCapPct, form.currentSalary,
     form.withdrawalStrategy, form.dividendETF, form.customDividendYield,
+    form.hasDivorceCOAP, form.divorceTSPDivision, form.divorceTSPSharePct,
     assumptions.tspReturnRate, assumptions.safeWithdrawalRate,
     assumptions.schdYield, assumptions.vymYield, assumptions.jepYield,
     baseValues.yearsToRetirement, assumptions.inflationRate,
