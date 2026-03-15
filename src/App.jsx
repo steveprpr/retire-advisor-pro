@@ -7,6 +7,7 @@ import ReportView from './components/Report/ReportView.jsx'
 import AssumptionsPanel from './components/Assumptions/AssumptionsPanel.jsx'
 import CodeGate from './components/AccessGate/CodeGate.jsx'
 import IdentityGate from './components/AccessGate/IdentityGate.jsx'
+import LandingPage from './components/Landing/LandingPage.jsx'
 
 const ACCESS_MODE = import.meta.env.VITE_ACCESS_MODE ?? 'code'
 const CODE_HASH = import.meta.env.VITE_ACCESS_CODE_HASH ?? ''
@@ -47,6 +48,11 @@ function AppShell() {
   }
 
   const openAssumptions = () => dispatch({ type: 'UI/TOGGLE_ASSUMPTIONS_PANEL' })
+
+  // ── Landing page ─────────────────────────────────────────────────────────────
+  if (ui.showLanding && !wizardComplete) {
+    return <LandingPage />
+  }
 
   // ── Wizard ──────────────────────────────────────────────────────────────────
   if (!wizardComplete) {

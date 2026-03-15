@@ -309,6 +309,7 @@ const initialAssumptions = {
 
 const initialUI = {
   currentStep: 0,
+  showLanding: true,             // show intro page before wizard
   wizardComplete: false,
   activeTab: 'wizard',           // 'wizard' | 'dashboard' | 'report' | 'assumptions'
   assumptionsPanelOpen: false,
@@ -400,7 +401,7 @@ function appReducer(state, action) {
     case 'UI/SET_STEP':
       return { ...state, ui: { ...state.ui, currentStep: action.step } }
     case 'UI/SET_WIZARD_COMPLETE':
-      return { ...state, ui: { ...state.ui, wizardComplete: true, activeTab: 'dashboard' } }
+      return { ...state, ui: { ...state.ui, wizardComplete: true, showLanding: false, activeTab: 'dashboard' } }
     case 'UI/REOPEN_WIZARD':
       return { ...state, ui: { ...state.ui, wizardComplete: false, currentStep: 0 } }
     case 'UI/SET_TAB':
@@ -411,6 +412,8 @@ function appReducer(state, action) {
       return { ...state, ui: { ...state.ui, assumptionsPanelOpen: !state.ui.assumptionsPanelOpen } }
     case 'UI/SET_ACCESS_GRANTED':
       return { ...state, ui: { ...state.ui, accessGranted: true } }
+    case 'UI/DISMISS_LANDING':
+      return { ...state, ui: { ...state.ui, showLanding: false } }
     case 'UI/SET_VALIDATION_ERRORS':
       return { ...state, ui: { ...state.ui, validationErrors: action.errors } }
     case 'UI/SET_REPORT_GENERATING':
