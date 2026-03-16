@@ -36,3 +36,9 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# Report generation streams a large AI response — needs extra time.
+# Netlify free tier max is 10s; Pro/higher tiers support up to 26s+.
+# Set to 26s here; upgrade plan if users on free tier still timeout.
+[functions."generate-report"]
+  timeout = 26

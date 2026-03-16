@@ -15,11 +15,16 @@ export const config = { path: '/api/generate-report' }
 const RATE_LIMIT_KEY = 'report_count'
 const RATE_LIMIT_MAX = 3
 
+// Fallback chain: fast streaming models only — avoid reasoning models (R1, o1)
+// that have a long "thinking" phase before first token, causing timeouts.
 const MODEL_CHAIN = [
   'anthropic/claude-sonnet-4-6',
-  'deepseek/deepseek-r1',
-  'google/gemini-pro-1.5',
+  'google/gemini-2.0-flash-001',
+  'deepseek/deepseek-chat',
 ]
+
+// Abort fetch after this many ms with no response (guard against hung upstream)
+const FETCH_TIMEOUT_MS = 55000
 
 const SYSTEM_PROMPT = `You are RetireAdvisor Pro, an expert federal/civilian retirement planning assistant. Your analysis is thorough, data-driven, and actionable. You never use generic advice — every insight references the specific numbers provided.
 
@@ -182,8 +187,12 @@ export default async function handler(req, context) {
 
       for (const model of MODEL_CHAIN) {
         try {
+          const abort = new AbortController()
+          const abortTimer = setTimeout(() => abort.abort(), FETCH_TIMEOUT_MS)
+
           const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
+            signal: abort.signal,
             headers: {
               Authorization: `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
@@ -191,9 +200,9 @@ export default async function handler(req, context) {
               'X-Title': 'RetireAdvisor Pro',
             },
             body: JSON.stringify({
-              models: [model],
+              model,
               stream: true,
-              max_tokens: 4096,
+              max_tokens: 8000,
               temperature: 0.3,
               messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
@@ -201,6 +210,7 @@ export default async function handler(req, context) {
               ],
             }),
           })
+          clearTimeout(abortTimer)
 
           if (!resp.ok) {
             lastError = `Model ${model} returned ${resp.status}`
