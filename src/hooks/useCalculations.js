@@ -156,17 +156,22 @@ export function useCalculations(form, assumptions) {
     })
 
     // Fold all additional pre-tax accounts into primary plan projection
-    const additionalPreTaxBalance = (form.secondary401kBalance || 0)
+    const additionalPlans = form.additionalPlans || []
+    const additionalPlansBalance = additionalPlans.reduce((s, p) => s + (p.balance || 0), 0)
+    const additionalPlansContrib = additionalPlans.reduce((s, p) => s + (p.contrib || 0), 0)
+    const additionalPlansMatch = additionalPlans.reduce((s, p) =>
+      s + ((form.currentSalary || 0) * (p.matchPct || 0) / 100), 0)
+
+    const additionalPreTaxBalance = additionalPlansBalance
       + (form.priorEmployer401kBalance || 0)
       + (form.traditionalIRABalance || 0)
       + (form.spouseTraditionalIRABalance || 0)
 
-    const secondary401kMatchAnnual = form.hasSecondary401k
-      ? ((form.currentSalary || 0) * (form.secondary401kEmployerMatchPct || 0) / 100)
-      : 0
-    const additionalAnnualContrib = (form.hasSecondary401k ? (form.secondary401kAnnualContrib || 0) : 0)
+    const additionalAnnualContrib = additionalPlansContrib
       + (form.traditionalIRAContrib || 0)
       + (form.spouseTraditionalIRAContrib || 0)
+
+    const secondary401kMatchAnnual = additionalPlansMatch
 
     const projection = computeTSPProjection({
       currentBalance: (form.tspTraditionalBalance || 0) + additionalPreTaxBalance,
@@ -210,8 +215,7 @@ export function useCalculations(form, assumptions) {
     form.annualContribRoth, form.employerMatchCapPct, form.currentSalary,
     form.withdrawalStrategy, form.dividendETF, form.customDividendYield,
     form.hasDivorceCOAP, form.divorceTSPDivision, form.divorceTSPSharePct,
-    form.secondary401kBalance, form.secondary401kAnnualContrib, form.secondary401kEmployerMatchPct,
-    form.hasSecondary401k, form.priorEmployer401kBalance,
+    form.additionalPlans, form.additionalPlanCount, form.priorEmployer401kBalance,
     form.traditionalIRABalance, form.traditionalIRAContrib,
     form.spouseTraditionalIRABalance, form.spouseTraditionalIRAContrib,
     assumptions.tspReturnRate, assumptions.safeWithdrawalRate,

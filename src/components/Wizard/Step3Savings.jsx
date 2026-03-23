@@ -18,6 +18,14 @@ const PLAN_TYPES = [
   { value: 'other', label: 'Other' },
 ]
 
+const ADDITIONAL_PLAN_TYPES = [
+  { value: '401k', label: '401(k)' },
+  { value: '403b', label: '403(b)' },
+  { value: '457b', label: '457(b)' },
+  { value: 'simple_ira', label: 'SIMPLE IRA' },
+  { value: 'other', label: 'Other' },
+]
+
 const DIVIDEND_ETFS = [
   { value: 'SCHD', label: 'SCHD — 3.5% yield (Schwab Dividend)', desc: 'Popular, diversified, 10%/yr dividend growth historically' },
   { value: 'VYM', label: 'VYM — 3.0% yield (Vanguard High Dividend)', desc: 'Broad diversification, low expense ratio' },
@@ -31,53 +39,61 @@ export default function Step3Savings() {
   const currentAge = form.birthYear ? CURRENT_YEAR - form.birthYear : 55
   const isCatchup = currentAge >= 50
   const maxContrib = LIMITS.tsp + (isCatchup ? LIMITS.catchup : 0)
-
-  // Employer match: always 100% match rate up to the cap % of salary
   const matchCapPct = form.employerMatchCapPct ?? 5
   const matchAmount = form.currentSalary ? (form.currentSalary * matchCapPct / 100) : 0
+
+  const additionalPlanCount = form.additionalPlanCount || 0
+  const additionalPlans = form.additionalPlans || []
+
+  const updateAdditionalPlan = (index, field, value) => {
+    const plans = [...(form.additionalPlans || [])]
+    while (plans.length <= index) plans.push({ type: '401k', balance: 0, contrib: 0, matchPct: 0 })
+    plans[index] = { ...plans[index], [field]: value }
+    updateField('additionalPlans', plans)
+  }
+
+  const setAdditionalPlanCount = (count) => {
+    updateField('additionalPlanCount', count)
+    const plans = [...(form.additionalPlans || [])]
+    while (plans.length < count) plans.push({ type: '401k', balance: 0, contrib: 0, matchPct: 0 })
+    updateField('additionalPlans', plans.slice(0, count))
+  }
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-gray-600 dark:text-gray-400">
-        Your savings and investments are the engine of your retirement. This step captures everything you're building — TSP/401k, Roth IRA, brokerage, HSA, and spouse savings — so we can project your total wealth at retirement and model how long it will last.
+        Your savings and investments are the engine of your retirement. This step captures everything you're building — employer plans, IRAs, brokerage, HSA, and spouse savings — so we can project your total wealth at retirement and model how long it will last.
       </p>
 
-      {/* Plan type */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="label">Retirement savings plan type</label>
-          <select className="input-field" value={form.planType} onChange={e => updateField('planType', e.target.value)}>
-            {PLAN_TYPES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Balances */}
+      {/* ── Primary employer plan ─────────────────────────────────────────── */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
-        <h3 className="font-medium text-gray-800 dark:text-gray-200">Current balances</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">Primary employer plan</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="label">Plan type</label>
+            <select className="input-field" value={form.planType} onChange={e => updateField('planType', e.target.value)}>
+              {PLAN_TYPES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">Traditional (pre-tax) balance ($)</label>
             <MoneyInput value={form.tspTraditionalBalance || 0} onChange={v => updateField('tspTraditionalBalance', v)} placeholder="150,000" />
           </div>
           <div>
-            <label className="label">Roth balance ($)</label>
+            <label className="label">Roth balance in this plan ($)</label>
             <MoneyInput value={form.tspRothBalance || 0} onChange={v => updateField('tspRothBalance', v)} placeholder="0" />
           </div>
         </div>
         {(form.tspTraditionalBalance || 0) + (form.tspRothBalance || 0) > 0 && (
           <p className="help-text">Combined balance: <strong>{formatCurrency((form.tspTraditionalBalance || 0) + (form.tspRothBalance || 0))}</strong></p>
         )}
-      </div>
 
-      {/* Annual contributions */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-800 dark:text-gray-200">Annual contributions</h3>
-          <span className="badge-blue">
-            {isCatchup ? `2025 limit: ${formatCurrency(maxContrib)} (catch-up)` : `2025 limit: ${formatCurrency(maxContrib)}`}
-          </span>
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">Your annual Traditional contribution ($)</label>
@@ -88,8 +104,10 @@ export default function Step3Savings() {
             <MoneyInput value={form.annualContribRoth || 0} onChange={v => updateField('annualContribRoth', v)} placeholder="0" />
           </div>
         </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          2025 combined limit: <strong>{formatCurrency(maxContrib)}</strong>{isCatchup ? ' (catch-up age 50+)' : ''}
+        </div>
 
-        {/* Employer match */}
         <div>
           <SliderWithInput
             label={
@@ -111,7 +129,7 @@ export default function Step3Savings() {
             }
           />
           {matchAmount > 0 && (
-            <p className="text-sm text-[#1D9E75] mt-1">✓ Employer will contribute approximately <strong>{formatCurrency(matchAmount)}/year</strong></p>
+            <p className="text-sm text-[#1D9E75] mt-1">✓ Employer contributes approximately <strong>{formatCurrency(matchAmount)}/year</strong></p>
           )}
           {(form.planType === 'tsp' || form.employmentType === 'federal') && matchCapPct >= 5 && (
             <p className="help-text text-[#1D9E75]">FERS: 1% automatic + up to 4% matching = 5% of salary total</p>
@@ -119,16 +137,252 @@ export default function Step3Savings() {
         </div>
       </div>
 
-      {/* Return rate */}
+      {/* ── Additional employer plans ─────────────────────────────────────── */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
+        <div>
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">
+            Additional employer-sponsored plans
+            <HelpTooltip content="Some employers — including certain federal agencies — offer more than one employer-sponsored retirement plan. For example, a TSP with 5% match plus a supplemental 401(k) with an additional 5% match from the same employer. Enter each additional plan separately." className="ml-1" />
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Same employer, additional plans — not from a different job.
+          </p>
+        </div>
+
+        <div>
+          <label className="label">How many additional employer plans do you have?</label>
+          <select
+            className="input-field md:w-64"
+            value={additionalPlanCount}
+            onChange={e => setAdditionalPlanCount(parseInt(e.target.value))}
+          >
+            <option value={0}>None — I only have one employer plan</option>
+            <option value={1}>1 additional plan</option>
+            <option value={2}>2 additional plans</option>
+            <option value={3}>3 additional plans</option>
+          </select>
+        </div>
+
+        {Array.from({ length: additionalPlanCount }).map((_, i) => {
+          const plan = additionalPlans[i] || { type: '401k', balance: 0, contrib: 0, matchPct: 0 }
+          const planMatch = (form.currentSalary || 0) * (plan.matchPct || 0) / 100
+          return (
+            <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
+              <h4 className="text-sm font-semibold text-[#1B3A6B] dark:text-blue-300">
+                Additional Plan {i + 1}
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Plan type</label>
+                  <select
+                    className="input-field"
+                    value={plan.type || '401k'}
+                    onChange={e => updateAdditionalPlan(i, 'type', e.target.value)}
+                  >
+                    {ADDITIONAL_PLAN_TYPES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Current balance ($)</label>
+                  <MoneyInput value={plan.balance || 0} onChange={v => updateAdditionalPlan(i, 'balance', v)} placeholder="50,000" />
+                </div>
+                <div>
+                  <label className="label">Your annual contribution ($)</label>
+                  <MoneyInput value={plan.contrib || 0} onChange={v => updateAdditionalPlan(i, 'contrib', v)} placeholder="10,000" />
+                </div>
+                <div>
+                  <label className="label">
+                    Employer match (% of salary)
+                    <HelpTooltip content="Enter the match percentage for this specific plan." className="ml-1" />
+                  </label>
+                  <SliderWithInput
+                    value={plan.matchPct || 0}
+                    onChange={v => updateAdditionalPlan(i, 'matchPct', v)}
+                    min={0}
+                    max={15}
+                    step={0.5}
+                    suffix="%"
+                    presets={[{ label: '5%', value: 5 }, { label: '3%', value: 3 }, { label: 'None', value: 0 }]}
+                  />
+                  {planMatch > 0 && (
+                    <p className="text-xs text-[#1D9E75] mt-1">✓ ~{formatCurrency(planMatch)}/year from this plan's match</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+
+        {additionalPlanCount > 0 && (() => {
+          const totalAdditionalBalance = additionalPlans.slice(0, additionalPlanCount).reduce((s, p) => s + (p.balance || 0), 0)
+          const totalAdditionalMatch = additionalPlans.slice(0, additionalPlanCount).reduce((s, p) => s + (form.currentSalary || 0) * (p.matchPct || 0) / 100, 0)
+          return (
+            <p className="text-sm text-[#1D9E75]">
+              ✓ Additional plans total: <strong>{formatCurrency(totalAdditionalBalance)}</strong> balance
+              {totalAdditionalMatch > 0 && <> · <strong>{formatCurrency(totalAdditionalMatch)}/yr</strong> combined employer match</>}
+            </p>
+          )
+        })()}
+      </div>
+
+      {/* ── Prior employer 401(k)s ────────────────────────────────────────── */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-3">
+        <h3 className="font-medium text-gray-800 dark:text-gray-200">
+          Prior employer 401(k)s
+          <HelpTooltip content="Add up all 401(k), 403(b), or 457 accounts from previous jobs that you haven't rolled over yet. These are growing at your chosen return rate but not receiving new contributions. Consider rolling them into a single IRA for simplicity." className="ml-1" />
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Total balance from previous jobs — no new contributions assumed.
+        </p>
+        <div className="flex items-start gap-4">
+          <div className="flex-1 max-w-xs">
+            <MoneyInput value={form.priorEmployer401kBalance || 0} onChange={v => updateField('priorEmployer401kBalance', v)} placeholder="0" />
+          </div>
+          {(form.priorEmployer401kBalance || 0) > 0 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 pt-2.5">
+              Growing at your {((form.tspReturnRate || 0.065) * 100).toFixed(1)}% return rate · no contributions.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Individual Retirement Accounts (IRAs) ─────────────────────────── */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-5">
+        <div>
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">Individual Retirement Accounts (IRAs)</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            IRAs are personal accounts separate from your employer plan — you set them up yourself.
+          </p>
+        </div>
+
+        {/* Traditional IRA */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Traditional IRA
+              <HelpTooltip content="A Traditional IRA holds pre-tax money. Contributions may be tax-deductible (subject to income limits if you have a workplace plan). Withdrawals in retirement are taxed as ordinary income. Required Minimum Distributions (RMDs) start at age 73." className="ml-1" />
+            </h4>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">
+                Your balance ($)
+              </label>
+              <MoneyInput value={form.traditionalIRABalance || 0} onChange={v => updateField('traditionalIRABalance', v)} placeholder="0" />
+            </div>
+            <div>
+              <label className="label">
+                Your annual contribution ($)
+                <span className="badge-blue ml-2">2025 limit: {formatCurrency(LIMITS.traditionalIra || 7000)}</span>
+              </label>
+              <MoneyInput value={form.traditionalIRAContrib || 0} onChange={v => updateField('traditionalIRAContrib', v)} placeholder="0" />
+            </div>
+          </div>
+          {form.maritalStatus === 'married' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Spouse's balance ($)</label>
+                <MoneyInput value={form.spouseTraditionalIRABalance || 0} onChange={v => updateField('spouseTraditionalIRABalance', v)} placeholder="0" />
+              </div>
+              <div>
+                <label className="label">Spouse's annual contribution ($)</label>
+                <MoneyInput value={form.spouseTraditionalIRAContrib || 0} onChange={v => updateField('spouseTraditionalIRAContrib', v)} placeholder="0" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <hr className="border-gray-200 dark:border-gray-700" />
+
+        {/* Roth IRA */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Roth IRA
+              <HelpTooltip content="A Roth IRA holds after-tax money. Contributions are not tax-deductible, but all growth and withdrawals in retirement are completely tax-free. No RMDs during your lifetime. Income limits apply for direct contributions." className="ml-1" />
+            </h4>
+          </div>
+
+          <div>
+            <label className="label">Do you have a Roth IRA?</label>
+            <select className="input-field md:w-80" value={form.hasRothIRA} onChange={e => updateField('hasRothIRA', e.target.value)}>
+              <option value="both">Yes — both spouses have one</option>
+              <option value="just_me">Yes — just me</option>
+              <option value="planning">Planning to start one</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          {form.hasRothIRA !== 'no' && (
+            <>
+              {form.hasRothIRA === 'both' ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Your Roth IRA</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <DollarField label="Your current balance ($)" fieldKey="rothIRABalance" form={form} updateField={updateField} />
+                      <div>
+                        <label className="label">
+                          Your annual contribution ($)
+                          <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra + (isCatchup ? LIMITS.rothCatchup : 0))}</span>
+                        </label>
+                        <MoneyInput value={form.annualRothIRAContrib || 0} onChange={v => updateField('annualRothIRAContrib', v)} placeholder="7,000" />
+                      </div>
+                    </div>
+                    <BackdoorRothBadge income={form.currentSalary} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Spouse's Roth IRA</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <DollarField label="Spouse's current balance ($)" fieldKey="spouseRothIRABalance" form={form} updateField={updateField} />
+                      <div>
+                        <label className="label">
+                          Spouse's annual contribution ($)
+                          <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra)}</span>
+                        </label>
+                        <MoneyInput value={form.annualSpouseRothIRAContrib || 0} onChange={v => updateField('annualSpouseRothIRAContrib', v)} placeholder="7,000" />
+                      </div>
+                    </div>
+                    <BackdoorRothBadge income={form.spouseCurrentSalary} />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DollarField label="Current Roth IRA balance ($)" fieldKey="rothIRABalance" form={form} updateField={updateField} />
+                    <div>
+                      <label className="label">
+                        Annual contribution ($)
+                        <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra + (isCatchup ? LIMITS.rothCatchup : 0))}</span>
+                      </label>
+                      <MoneyInput value={form.annualRothIRAContrib || 0} onChange={v => updateField('annualRothIRAContrib', v)} placeholder="7,000" />
+                    </div>
+                  </div>
+                  <BackdoorRothBadge income={form.currentSalary} />
+                </>
+              )}
+            </>
+          )}
+
+          <HelpAccordion title="Traditional IRA vs. Roth IRA — which is better?">
+            <p><strong>Traditional IRA:</strong> Tax deduction now, pay taxes in retirement. Best if you expect a lower tax rate in retirement than today.</p>
+            <p className="mt-2"><strong>Roth IRA:</strong> No deduction now, tax-free in retirement. Best if you expect rates to rise or want tax-free legacy assets.</p>
+            <p className="mt-2"><strong>Both:</strong> 2025 combined contribution limit is $7,000 ($8,000 if age 50+), shared across all your IRAs.</p>
+            <p className="mt-2"><strong>Income limits (Roth):</strong> $150K–$165K (single) / $236K–$246K (married) for direct contributions. Above this, use the Backdoor Roth method via a Traditional IRA.</p>
+          </HelpAccordion>
+        </div>
+      </div>
+
+      {/* ── Return rate ────────────────────────────────────────────────────── */}
       <SliderWithInput
-        label="Expected annual return"
+        label="Expected annual return (all accounts)"
         value={(form.tspReturnRate || 0.065) * 100}
         onChange={v => updateField('tspReturnRate', v / 100)}
         min={4}
         max={12}
         step={0.1}
         suffix="%"
-        helpText="Historical S&P 500 avg: ~10%. Blended portfolio with bonds: ~6–7%. Adjust for your allocation."
+        helpText="Applied to all retirement accounts above. Historical S&P 500 avg: ~10%. Blended portfolio with bonds: ~6–7%."
         presets={[
           { label: 'Conservative (5%)', value: 5 },
           { label: 'Moderate (6.5%)', value: 6.5 },
@@ -136,7 +390,7 @@ export default function Step3Savings() {
         ]}
       />
 
-      {/* Withdrawal strategy */}
+      {/* ── Withdrawal strategy ────────────────────────────────────────────── */}
       <div>
         <label className="label">Withdrawal strategy at retirement</label>
         <div className="space-y-2">
@@ -183,196 +437,7 @@ export default function Step3Savings() {
         )}
       </div>
 
-      {/* Roth IRA */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
-        <h3 className="font-medium text-gray-800 dark:text-gray-200">Roth IRA</h3>
-        <div>
-          <label className="label">Do you have a Roth IRA?</label>
-          <select className="input-field md:w-80" value={form.hasRothIRA} onChange={e => updateField('hasRothIRA', e.target.value)}>
-            <option value="both">Yes — both spouses have one</option>
-            <option value="just_me">Yes — just me</option>
-            <option value="planning">Planning to start one</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-
-        {form.hasRothIRA !== 'no' && (
-          <>
-            {form.hasRothIRA === 'both' ? (
-              <div className="space-y-3">
-                {/* Your Roth */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Your Roth IRA</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <DollarField label="Your current balance ($)" fieldKey="rothIRABalance" form={form} updateField={updateField} />
-                    <div>
-                      <label className="label">
-                        Your annual contribution ($)
-                        <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra + (isCatchup ? LIMITS.rothCatchup : 0))}</span>
-                      </label>
-                      <MoneyInput value={form.annualRothIRAContrib || 0} onChange={v => updateField('annualRothIRAContrib', v)} placeholder="7,000" />
-                    </div>
-                  </div>
-                  <BackdoorRothBadge income={form.currentSalary} />
-                </div>
-                {/* Spouse Roth */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Spouse's Roth IRA</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <DollarField label="Spouse's current balance ($)" fieldKey="spouseRothIRABalance" form={form} updateField={updateField} />
-                    <div>
-                      <label className="label">
-                        Spouse's annual contribution ($)
-                        <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra)}</span>
-                      </label>
-                      <MoneyInput value={form.annualSpouseRothIRAContrib || 0} onChange={v => updateField('annualSpouseRothIRAContrib', v)} placeholder="7,000" />
-                    </div>
-                  </div>
-                  <BackdoorRothBadge income={form.spouseCurrentSalary} />
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DollarField label="Current Roth IRA balance ($)" fieldKey="rothIRABalance" form={form} updateField={updateField} />
-                  <div>
-                    <label className="label">
-                      Annual contribution ($)
-                      <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra + (isCatchup ? LIMITS.rothCatchup : 0))}</span>
-                    </label>
-                      <MoneyInput value={form.annualRothIRAContrib || 0} onChange={v => updateField('annualRothIRAContrib', v)} placeholder="7,000" />
-                  </div>
-                </div>
-                <BackdoorRothBadge income={form.currentSalary} />
-              </>
-            )}
-          </>
-        )}
-
-        <HelpAccordion title="What is a Roth IRA?">
-          <p>A <strong>Roth IRA</strong> is a retirement account where you contribute <em>after-tax</em> money. The growth and withdrawals in retirement are <em>completely tax-free</em>. This is the opposite of a Traditional IRA or TSP, where you pay taxes when you withdraw.</p>
-          <p className="mt-2">Key benefits: tax-free growth, no Required Minimum Distributions (RMDs), flexible withdrawal rules, excellent estate planning tool.</p>
-          <p className="mt-2">Income limit for 2024: $161K (single) / $240K (MFJ) for direct contributions. Above that, the Backdoor Roth method is required.</p>
-        </HelpAccordion>
-      </div>
-
-      {/* Additional Accounts */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-5">
-        <div>
-          <h3 className="font-medium text-gray-800 dark:text-gray-200">Additional accounts</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Include any other retirement accounts so your total projected wealth is accurate.
-          </p>
-        </div>
-
-        {/* Secondary 401k */}
-        <div className="space-y-3">
-          <label className="flex items-center gap-2 text-sm cursor-pointer font-medium">
-            <input
-              type="checkbox"
-              checked={form.hasSecondary401k || false}
-              onChange={e => updateField('hasSecondary401k', e.target.checked)}
-              className="accent-[#2E6DB4]"
-            />
-            Secondary 401(k) / 403(b) — e.g., spouse's employer or side job
-            <HelpTooltip content="If you or your spouse has a separate active 401k (not the primary TSP/401k above), enter it here. Annual contributions and employer match will be projected to retirement." className="ml-1" />
-          </label>
-          {form.hasSecondary401k && (
-            <div className="ml-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="label">Current balance ($)</label>
-                <MoneyInput value={form.secondary401kBalance || 0} onChange={v => updateField('secondary401kBalance', v)} placeholder="50,000" />
-              </div>
-              <div>
-                <label className="label">
-                  Annual contribution ($)
-                  <HelpTooltip content="Your (or spouse's) annual employee contribution to this plan." className="ml-1" />
-                </label>
-                <MoneyInput value={form.secondary401kAnnualContrib || 0} onChange={v => updateField('secondary401kAnnualContrib', v)} placeholder="10,000" />
-              </div>
-              <div>
-                <label className="label">
-                  Employer match (% of salary)
-                  <HelpTooltip content="This employer's match percentage. 0 if no match." className="ml-1" />
-                </label>
-                <SliderWithInput
-                  value={form.secondary401kEmployerMatchPct || 0}
-                  onChange={v => updateField('secondary401kEmployerMatchPct', v)}
-                  min={0}
-                  max={10}
-                  step={0.5}
-                  suffix="%"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Prior employer 401ks */}
-        <div>
-          <label className="label">
-            Prior employer 401(k)s — total balance ($)
-            <HelpTooltip content="Add up all 401(k), 403(b), or 457 accounts from previous jobs that you haven't rolled over yet. These are growing at your chosen return rate but not receiving new contributions. Consider rolling them into a single IRA for simplicity." className="ml-1" />
-          </label>
-          <div className="flex items-start gap-4">
-            <div className="flex-1 max-w-xs">
-              <MoneyInput value={form.priorEmployer401kBalance || 0} onChange={v => updateField('priorEmployer401kBalance', v)} placeholder="0" />
-            </div>
-            {(form.priorEmployer401kBalance || 0) > 0 && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 pt-2.5">
-                Growing at your {((form.tspReturnRate || 0.065) * 100).toFixed(1)}% return rate — no new contributions.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Traditional IRA */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Traditional IRA
-            </h4>
-            <HelpTooltip content="A Traditional IRA is a pre-tax retirement account. Contributions may be tax-deductible (income limits apply if you also have a workplace plan). Withdrawals in retirement are taxed as ordinary income. Subject to RMDs at age 73." className="ml-1" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Your balance ($)</label>
-              <MoneyInput value={form.traditionalIRABalance || 0} onChange={v => updateField('traditionalIRABalance', v)} placeholder="0" />
-            </div>
-            <div>
-              <label className="label">
-                Your annual contribution ($)
-                <span className="badge-blue ml-2">2025 limit: {formatCurrency(LIMITS.traditionalIra || 7000)}</span>
-              </label>
-              <MoneyInput value={form.traditionalIRAContrib || 0} onChange={v => updateField('traditionalIRAContrib', v)} placeholder="0" />
-            </div>
-          </div>
-          {form.maritalStatus === 'married' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Spouse's balance ($)</label>
-                <MoneyInput value={form.spouseTraditionalIRABalance || 0} onChange={v => updateField('spouseTraditionalIRABalance', v)} placeholder="0" />
-              </div>
-              <div>
-                <label className="label">Spouse's annual contribution ($)</label>
-                <MoneyInput value={form.spouseTraditionalIRAContrib || 0} onChange={v => updateField('spouseTraditionalIRAContrib', v)} placeholder="0" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Total summary */}
-        {(() => {
-          const totalAdditional = (form.secondary401kBalance || 0) + (form.priorEmployer401kBalance || 0) + (form.traditionalIRABalance || 0) + (form.spouseTraditionalIRABalance || 0)
-          return totalAdditional > 0 ? (
-            <p className="text-sm text-[#1D9E75]">
-              ✓ Additional accounts total: <strong>{formatCurrency(totalAdditional)}</strong> — included in your retirement projections.
-            </p>
-          ) : null
-        })()}
-      </div>
-
-      {/* Roth Conversion Strategy */}
+      {/* ── Roth Conversion Strategy ───────────────────────────────────────── */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-gray-800 dark:text-gray-200">
@@ -404,13 +469,10 @@ export default function Step3Savings() {
         {form.rothConversionStrategy === 'custom' && (
           <div>
             <label className="label">Annual conversion amount ($)</label>
-            <div className="relative md:w-60">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input
-                type="number"
-                className="input-field pl-7"
-                value={form.rothConversionCustomAmount || ''}
-                onChange={e => updateField('rothConversionCustomAmount', parseFloat(e.target.value) || 0)}
+            <div className="md:w-60">
+              <MoneyInput
+                value={form.rothConversionCustomAmount || 0}
+                onChange={v => updateField('rothConversionCustomAmount', v)}
                 placeholder="20,000"
               />
             </div>
@@ -455,11 +517,10 @@ export default function Step3Savings() {
         </HelpAccordion>
       </div>
 
-      {/* Other savings */}
+      {/* ── Other savings ──────────────────────────────────────────────────── */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-5">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Other savings</h3>
 
-        {/* Taxable Brokerage */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Taxable brokerage account</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -471,7 +532,6 @@ export default function Step3Savings() {
 
         <hr className="border-gray-200 dark:border-gray-700" />
 
-        {/* HSA */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Health Savings Account (HSA)
@@ -479,14 +539,13 @@ export default function Step3Savings() {
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <DollarField label="Current balance ($)" fieldKey="hsaBalance" form={form} updateField={updateField} />
-            <DollarField label="Annual contribution ($)" fieldKey="annualHSAContrib" form={form} updateField={updateField} helpText={`2025 limit: $4,300 / $8,550 (family)`} />
+            <DollarField label="Annual contribution ($)" fieldKey="annualHSAContrib" form={form} updateField={updateField} helpText="2025 limit: $4,300 / $8,550 (family)" />
             <DollarField label="Annual medical spending in retirement ($)" fieldKey="annualHSAMedWithdrawal" form={form} updateField={updateField} helpText="Withdrawn tax-free for healthcare" />
           </div>
         </div>
 
         <hr className="border-gray-200 dark:border-gray-700" />
 
-        {/* Other savings */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Other savings (CDs, bonds, savings accounts)</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -498,14 +557,13 @@ export default function Step3Savings() {
 
         <hr className="border-gray-200 dark:border-gray-700" />
 
-        {/* Cash reserve */}
         <div className="space-y-1">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Cash emergency fund</h4>
           <DollarField label="Balance ($)" fieldKey="cashEmergencyFund" form={form} updateField={updateField} helpText="Kept as a reserve — not included in investment projections" />
         </div>
       </div>
 
-      {/* Spouse retirement plan */}
+      {/* ── Spouse retirement plan ──────────────────────────────────────────── */}
       {form.maritalStatus === 'married' && <SpouseRetirementSection />}
     </div>
   )

@@ -74,10 +74,8 @@ const initialForm = {
   rothIRARetirementPlan: 'unsure', // 'growth_4pct' | 'dividend' | 'unsure'
 
   // Additional retirement accounts (Step 3)
-  hasSecondary401k: false,
-  secondary401kBalance: 0,
-  secondary401kAnnualContrib: 0,
-  secondary401kEmployerMatchPct: 0,
+  additionalPlanCount: 0,
+  additionalPlans: [],
   priorEmployer401kBalance: 0,
   traditionalIRABalance: 0,
   traditionalIRAContrib: 0,
