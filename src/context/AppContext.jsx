@@ -73,6 +73,17 @@ const initialForm = {
   rothIRAReturnRate: 0.08,
   rothIRARetirementPlan: 'unsure', // 'growth_4pct' | 'dividend' | 'unsure'
 
+  // Additional retirement accounts (Step 3)
+  hasSecondary401k: false,
+  secondary401kBalance: 0,
+  secondary401kAnnualContrib: 0,
+  secondary401kEmployerMatchPct: 0,
+  priorEmployer401kBalance: 0,
+  traditionalIRABalance: 0,
+  traditionalIRAContrib: 0,
+  spouseTraditionalIRABalance: 0,
+  spouseTraditionalIRAContrib: 0,
+
   // Roth conversion
   rothConversionStrategy: 'none',   // 'none' | 'fill_12' | 'fill_22' | 'custom'
   rothConversionCustomAmount: 0,
@@ -414,6 +425,8 @@ function appReducer(state, action) {
       return { ...state, ui: { ...state.ui, accessGranted: true } }
     case 'UI/DISMISS_LANDING':
       return { ...state, ui: { ...state.ui, showLanding: false } }
+    case 'UI/SHOW_LANDING':
+      return { ...state, ui: { ...state.ui, showLanding: true } }
     case 'UI/SET_VALIDATION_ERRORS':
       return { ...state, ui: { ...state.ui, validationErrors: action.errors } }
     case 'UI/SET_REPORT_GENERATING':

@@ -155,12 +155,25 @@ export function useCalculations(form, assumptions) {
       fixedAmount: 0,
     })
 
+    // Fold all additional pre-tax accounts into primary plan projection
+    const additionalPreTaxBalance = (form.secondary401kBalance || 0)
+      + (form.priorEmployer401kBalance || 0)
+      + (form.traditionalIRABalance || 0)
+      + (form.spouseTraditionalIRABalance || 0)
+
+    const secondary401kMatchAnnual = form.hasSecondary401k
+      ? ((form.currentSalary || 0) * (form.secondary401kEmployerMatchPct || 0) / 100)
+      : 0
+    const additionalAnnualContrib = (form.hasSecondary401k ? (form.secondary401kAnnualContrib || 0) : 0)
+      + (form.traditionalIRAContrib || 0)
+      + (form.spouseTraditionalIRAContrib || 0)
+
     const projection = computeTSPProjection({
-      currentBalance: form.tspTraditionalBalance || 0,
+      currentBalance: (form.tspTraditionalBalance || 0) + additionalPreTaxBalance,
       rothBalance: form.tspRothBalance || 0,
-      annualContributionTraditional: form.annualContribTraditional || 0,
+      annualContributionTraditional: (form.annualContribTraditional || 0) + additionalAnnualContrib,
       annualContributionRoth: form.annualContribRoth || 0,
-      employerMatchAnnual,
+      employerMatchAnnual: employerMatchAnnual + secondary401kMatchAnnual,
       returnRate: assumptions.tspReturnRate,
       yearsToRetirement: baseValues.yearsToRetirement,
       inflationRate: assumptions.inflationRate,
@@ -197,6 +210,10 @@ export function useCalculations(form, assumptions) {
     form.annualContribRoth, form.employerMatchCapPct, form.currentSalary,
     form.withdrawalStrategy, form.dividendETF, form.customDividendYield,
     form.hasDivorceCOAP, form.divorceTSPDivision, form.divorceTSPSharePct,
+    form.secondary401kBalance, form.secondary401kAnnualContrib, form.secondary401kEmployerMatchPct,
+    form.hasSecondary401k, form.priorEmployer401kBalance,
+    form.traditionalIRABalance, form.traditionalIRAContrib,
+    form.spouseTraditionalIRABalance, form.spouseTraditionalIRAContrib,
     assumptions.tspReturnRate, assumptions.safeWithdrawalRate,
     assumptions.schdYield, assumptions.vymYield, assumptions.jepYield,
     baseValues.yearsToRetirement, assumptions.inflationRate,

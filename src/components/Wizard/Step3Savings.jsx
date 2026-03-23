@@ -256,6 +256,122 @@ export default function Step3Savings() {
         </HelpAccordion>
       </div>
 
+      {/* Additional Accounts */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-5">
+        <div>
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">Additional accounts</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Include any other retirement accounts so your total projected wealth is accurate.
+          </p>
+        </div>
+
+        {/* Secondary 401k */}
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm cursor-pointer font-medium">
+            <input
+              type="checkbox"
+              checked={form.hasSecondary401k || false}
+              onChange={e => updateField('hasSecondary401k', e.target.checked)}
+              className="accent-[#2E6DB4]"
+            />
+            Secondary 401(k) / 403(b) — e.g., spouse's employer or side job
+            <HelpTooltip content="If you or your spouse has a separate active 401k (not the primary TSP/401k above), enter it here. Annual contributions and employer match will be projected to retirement." className="ml-1" />
+          </label>
+          {form.hasSecondary401k && (
+            <div className="ml-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="label">Current balance ($)</label>
+                <MoneyInput value={form.secondary401kBalance || 0} onChange={v => updateField('secondary401kBalance', v)} placeholder="50,000" />
+              </div>
+              <div>
+                <label className="label">
+                  Annual contribution ($)
+                  <HelpTooltip content="Your (or spouse's) annual employee contribution to this plan." className="ml-1" />
+                </label>
+                <MoneyInput value={form.secondary401kAnnualContrib || 0} onChange={v => updateField('secondary401kAnnualContrib', v)} placeholder="10,000" />
+              </div>
+              <div>
+                <label className="label">
+                  Employer match (% of salary)
+                  <HelpTooltip content="This employer's match percentage. 0 if no match." className="ml-1" />
+                </label>
+                <SliderWithInput
+                  value={form.secondary401kEmployerMatchPct || 0}
+                  onChange={v => updateField('secondary401kEmployerMatchPct', v)}
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  suffix="%"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Prior employer 401ks */}
+        <div>
+          <label className="label">
+            Prior employer 401(k)s — total balance ($)
+            <HelpTooltip content="Add up all 401(k), 403(b), or 457 accounts from previous jobs that you haven't rolled over yet. These are growing at your chosen return rate but not receiving new contributions. Consider rolling them into a single IRA for simplicity." className="ml-1" />
+          </label>
+          <div className="flex items-start gap-4">
+            <div className="flex-1 max-w-xs">
+              <MoneyInput value={form.priorEmployer401kBalance || 0} onChange={v => updateField('priorEmployer401kBalance', v)} placeholder="0" />
+            </div>
+            {(form.priorEmployer401kBalance || 0) > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 pt-2.5">
+                Growing at your {((form.tspReturnRate || 0.065) * 100).toFixed(1)}% return rate — no new contributions.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Traditional IRA */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Traditional IRA
+            </h4>
+            <HelpTooltip content="A Traditional IRA is a pre-tax retirement account. Contributions may be tax-deductible (income limits apply if you also have a workplace plan). Withdrawals in retirement are taxed as ordinary income. Subject to RMDs at age 73." className="ml-1" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Your balance ($)</label>
+              <MoneyInput value={form.traditionalIRABalance || 0} onChange={v => updateField('traditionalIRABalance', v)} placeholder="0" />
+            </div>
+            <div>
+              <label className="label">
+                Your annual contribution ($)
+                <span className="badge-blue ml-2">2025 limit: {formatCurrency(LIMITS.traditionalIra || 7000)}</span>
+              </label>
+              <MoneyInput value={form.traditionalIRAContrib || 0} onChange={v => updateField('traditionalIRAContrib', v)} placeholder="0" />
+            </div>
+          </div>
+          {form.maritalStatus === 'married' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Spouse's balance ($)</label>
+                <MoneyInput value={form.spouseTraditionalIRABalance || 0} onChange={v => updateField('spouseTraditionalIRABalance', v)} placeholder="0" />
+              </div>
+              <div>
+                <label className="label">Spouse's annual contribution ($)</label>
+                <MoneyInput value={form.spouseTraditionalIRAContrib || 0} onChange={v => updateField('spouseTraditionalIRAContrib', v)} placeholder="0" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Total summary */}
+        {(() => {
+          const totalAdditional = (form.secondary401kBalance || 0) + (form.priorEmployer401kBalance || 0) + (form.traditionalIRABalance || 0) + (form.spouseTraditionalIRABalance || 0)
+          return totalAdditional > 0 ? (
+            <p className="text-sm text-[#1D9E75]">
+              ✓ Additional accounts total: <strong>{formatCurrency(totalAdditional)}</strong> — included in your retirement projections.
+            </p>
+          ) : null
+        })()}
+      </div>
+
       {/* Roth Conversion Strategy */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <div className="flex items-center justify-between">

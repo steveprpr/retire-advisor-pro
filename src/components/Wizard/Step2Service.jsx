@@ -6,7 +6,6 @@ import { formatCurrency } from '../../utils/formatters.js'
 import { computeAutoHigh3, computeServiceYearsAtRetirement, getMRADisplay } from '../../utils/federalCalculations.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
-const AGENCIES = ['FDIC', 'DOD', 'DHS', 'VA', 'HHS', 'Treasury', 'State Dept', 'USPS', 'Army', 'Navy', 'Air Force', 'NASA', 'FBI', 'CBP', 'IRS', 'SSA', 'OPM', 'USMC', 'Coast Guard', 'Other']
 
 export default function Step2Service() {
   const { form, updateField } = useForm()
@@ -44,23 +43,8 @@ export default function Step2Service() {
       {/* Divorce court order — shown prominently at top when divorced */}
       {isDivorced && <DivorceCourtOrderSection isFederal={true} isDivorced={true} />}
 
-      {/* Agency */}
+      {/* Retirement system */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="label">Current agency</label>
-          <input
-            type="text"
-            className="input-field"
-            placeholder="e.g., FDIC, DOD, HHS"
-            value={form.agency}
-            onChange={e => updateField('agency', e.target.value)}
-            list="agency-list"
-          />
-          <datalist id="agency-list">
-            {AGENCIES.map(a => <option key={a} value={a} />)}
-          </datalist>
-        </div>
-
         <div>
           <label className="label">
             Retirement system

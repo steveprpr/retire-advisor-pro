@@ -62,6 +62,7 @@ function AppShell() {
           onToggleDark={toggleDark}
           darkMode={ui.darkMode}
           wizardComplete={false}
+          onGoHome={() => dispatch({ type: 'UI/SHOW_LANDING' })}
         />
         <main>
           <WizardShell />
@@ -84,6 +85,7 @@ function AppShell() {
           wizardComplete={true}
           onEditInputs={() => dispatch({ type: 'UI/REOPEN_WIZARD' })}
           onOpenAssumptions={openAssumptions}
+          onGoHome={() => dispatch({ type: 'UI/SHOW_LANDING' })}
         />
 
         <main className="pb-16">
@@ -99,7 +101,7 @@ function AppShell() {
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
-function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, onEditInputs, onOpenAssumptions, wizardComplete }) {
+function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, onEditInputs, onOpenAssumptions, wizardComplete, onGoHome }) {
   const { dispatch } = useUI()
 
   return (
@@ -109,9 +111,9 @@ function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, o
         {/* Logo — always clickable, returns to Dashboard if wizard is done */}
         <button
           type="button"
-          onClick={() => wizardComplete && onTabChange?.('dashboard')}
-          className={`flex items-center gap-2 flex-shrink-0 ${wizardComplete ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
-          title={wizardComplete ? 'Go to Dashboard' : 'RetireAdvisor Pro'}
+          onClick={() => onGoHome?.()}
+          className="flex items-center gap-2 flex-shrink-0 cursor-pointer hover:opacity-80"
+          title="RetireAdvisor Pro — Home"
         >
           <div className="w-7 h-7 bg-[#1B3A6B] rounded-lg flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -128,11 +130,18 @@ function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, o
         {showTabs && (
           <nav className="flex items-center gap-1 flex-1 justify-center">
             <NavBtn
+              active={false}
+              onClick={onGoHome}
+              icon="🏠"
+            >
+              Home
+            </NavBtn>
+            <NavBtn
               active={activeTab === 'dashboard'}
               onClick={() => onTabChange('dashboard')}
               icon="📊"
             >
-              Home
+              Dashboard
             </NavBtn>
             <NavBtn
               active={activeTab === 'report'}
@@ -154,6 +163,17 @@ function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, o
 
         {/* Right controls */}
         <div className="flex items-center gap-1 flex-shrink-0">
+          {!showTabs && onGoHome && (
+            <button
+              type="button"
+              onClick={onGoHome}
+              className="btn-ghost text-xs flex items-center gap-1"
+              title="Back to Home"
+            >
+              <span className="hidden sm:inline">🏠 Home</span>
+              <span className="sm:hidden">🏠</span>
+            </button>
+          )}
           {showTabs && onEditInputs && (
             <button
               type="button"

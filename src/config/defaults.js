@@ -109,7 +109,7 @@ export const DEFAULT_ASSUMPTIONS = {
 // IRS contribution limits by year (for auto-suggest badges)
 export const IRS_LIMITS = {
   2024: { tsp: 23000, catchup: 7500, rothIra: 7000, rothCatchup: 1000 },
-  2025: { tsp: 23500, catchup: 7500, rothIra: 7000, rothCatchup: 1000 },
+  2025: { tsp: 23500, catchup: 7500, rothIra: 7000, rothCatchup: 1000, traditionalIra: 7000 },
 }
 
 // FERS MRA lookup table (birth year → Minimum Retirement Age)
