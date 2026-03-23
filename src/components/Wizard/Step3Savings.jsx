@@ -5,6 +5,7 @@ import { MoneyInput } from '../common/MoneyInput.jsx'
 import { BackdoorRothBadge } from '../common/SmartBadge.jsx'
 import { formatCurrency } from '../../utils/formatters.js'
 import { IRS_LIMITS } from '../../config/defaults.js'
+import { computeFersPension, computeAutoHigh3 } from '../../utils/federalCalculations.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const LIMITS = IRS_LIMITS[CURRENT_YEAR] || IRS_LIMITS[2025]
@@ -263,30 +264,64 @@ export default function Step3Savings() {
               <HelpTooltip content="A Traditional IRA holds pre-tax money. Contributions may be tax-deductible (subject to income limits if you have a workplace plan). Withdrawals in retirement are taxed as ordinary income. Required Minimum Distributions (RMDs) start at age 73." className="ml-1" />
             </h4>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">
-                Your balance ($)
-              </label>
-              <MoneyInput value={form.traditionalIRABalance || 0} onChange={v => updateField('traditionalIRABalance', v)} placeholder="0" />
-            </div>
-            <div>
-              <label className="label">
-                Your annual contribution ($)
-                <span className="badge-blue ml-2">2025 limit: {formatCurrency(LIMITS.traditionalIra || 7000)}</span>
-              </label>
-              <MoneyInput value={form.traditionalIRAContrib || 0} onChange={v => updateField('traditionalIRAContrib', v)} placeholder="0" />
-            </div>
+
+          <div>
+            <label className="label">Do you have a Traditional IRA?</label>
+            <select className="input-field md:w-80" value={form.hasTraditionalIRA || 'no'} onChange={e => updateField('hasTraditionalIRA', e.target.value)}>
+              {form.maritalStatus === 'married' ? (
+                <>
+                  <option value="both">Yes — both spouses have one</option>
+                  <option value="just_me">Yes — just me</option>
+                  <option value="just_spouse">Yes — just my spouse</option>
+                  <option value="no">No</option>
+                </>
+              ) : (
+                <>
+                  <option value="just_me">Yes</option>
+                  <option value="no">No</option>
+                </>
+              )}
+            </select>
           </div>
-          {form.maritalStatus === 'married' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Spouse's balance ($)</label>
-                <MoneyInput value={form.spouseTraditionalIRABalance || 0} onChange={v => updateField('spouseTraditionalIRABalance', v)} placeholder="0" />
+
+          {(form.hasTraditionalIRA === 'just_me' || form.hasTraditionalIRA === 'both') && (
+            <div>
+              {form.hasTraditionalIRA === 'both' && (
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Your Traditional IRA</p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Your balance ($)</label>
+                  <MoneyInput value={form.traditionalIRABalance || 0} onChange={v => updateField('traditionalIRABalance', v)} placeholder="0" />
+                </div>
+                <div>
+                  <label className="label">
+                    Your annual contribution ($)
+                    <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.traditionalIra || 7000)}</span>
+                  </label>
+                  <MoneyInput value={form.traditionalIRAContrib || 0} onChange={v => updateField('traditionalIRAContrib', v)} placeholder="0" />
+                </div>
               </div>
-              <div>
-                <label className="label">Spouse's annual contribution ($)</label>
-                <MoneyInput value={form.spouseTraditionalIRAContrib || 0} onChange={v => updateField('spouseTraditionalIRAContrib', v)} placeholder="0" />
+            </div>
+          )}
+
+          {(form.hasTraditionalIRA === 'just_spouse' || form.hasTraditionalIRA === 'both') && (
+            <div>
+              {form.hasTraditionalIRA === 'both' && (
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Spouse's Traditional IRA</p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Spouse's balance ($)</label>
+                  <MoneyInput value={form.spouseTraditionalIRABalance || 0} onChange={v => updateField('spouseTraditionalIRABalance', v)} placeholder="0" />
+                </div>
+                <div>
+                  <label className="label">
+                    Spouse's annual contribution ($)
+                    <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.traditionalIra || 7000)}</span>
+                  </label>
+                  <MoneyInput value={form.spouseTraditionalIRAContrib || 0} onChange={v => updateField('spouseTraditionalIRAContrib', v)} placeholder="0" />
+                </div>
               </div>
             </div>
           )}
@@ -584,6 +619,7 @@ function SpouseRetirementSection() {
   const spouseBirthYear = form.spouseBirthYear
   const spouseCurrentAge = spouseBirthYear ? CURRENT_YEAR - parseInt(spouseBirthYear) : null
   const isFederal = form.spouseEmploymentType === 'federal'
+  const isMilitary = form.spouseEmploymentType === 'military'
   const isPrivate = form.spouseEmploymentType === 'private' || form.spouseEmploymentType === 'state_local' || form.spouseEmploymentType === 'nonprofit'
   const hasPlan = form.spouseEmploymentType && form.spouseEmploymentType !== 'none' && form.spouseEmploymentType !== ''
 
@@ -681,12 +717,55 @@ function SpouseRetirementSection() {
         </div>
       )}
 
-      {/* Pension (private/state/nonprofit) */}
-      {isPrivate && (
+      {/* FERS annuity preview for federal spouses */}
+      {isFederal && (() => {
+        const spouseRetireAge = form.spouseTargetRetirementAge || 62
+        const spouseServiceYrs = form.spouseSCDYear
+          ? Math.max(0, (CURRENT_YEAR + Math.max(0, spouseRetireAge - (spouseCurrentAge || 55))) - parseInt(form.spouseSCDYear))
+          : (form.spouseCredibleServiceYears || 0)
+        const spouseHigh3 = form.spouseHigh3Override
+          ? (form.spouseHigh3Salary || 0)
+          : computeAutoHigh3(form.spouseCurrentSalary || 0, form.spouseSalaryGrowthRate || 0.01, spouseRetireAge, spouseCurrentAge || 55, null)
+        const spousePension = computeFersPension({
+          high3Salary: spouseHigh3,
+          credibleServiceYears: spouseServiceYrs,
+          retirementAge: spouseRetireAge,
+          militaryBuybackYears: 0,
+          unusedSickLeaveMonths: 0,
+          survivorBenefitElection: 'none',
+          retirementSystem: form.spouseRetirementSystem || 'fers',
+          specialCategory: 'standard',
+          birthYear: form.spouseBirthYear,
+          projectedSSAt62Monthly: 0,
+        })
+        if (!spousePension.netMonthlyAnnuity) return null
+        return (
+          <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-[#2E6DB4]/30 rounded-lg">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estimated FERS Annuity at Age {spouseRetireAge}</p>
+            <div className="flex gap-6">
+              <div>
+                <div className="text-xl font-bold text-[#1B3A6B] dark:text-blue-300">{formatCurrency(spousePension.netMonthlyAnnuity)}<span className="text-sm font-normal text-gray-500">/mo</span></div>
+                <div className="text-xs text-gray-500">{formatCurrency(spousePension.netMonthlyAnnuity * 12)}/yr · {spouseServiceYrs.toFixed(1)} yrs service</div>
+              </div>
+              {spousePension.hasSRS && spousePension.srsMonthly > 0 && (
+                <div>
+                  <div className="text-lg font-semibold text-[#1D9E75]">+ {formatCurrency(spousePension.srsMonthly)}<span className="text-sm font-normal text-gray-500">/mo SRS</span></div>
+                  <div className="text-xs text-gray-500">SS bridge until age 62</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Pension (private/state/nonprofit/military) */}
+      {(isPrivate || isMilitary) && (
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pension</h4>
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {isMilitary ? 'Military Retirement Pay' : 'Pension'}
+          </h4>
           <div>
-            <label className="label">Does your spouse have a pension?</label>
+            <label className="label">Does your spouse have a {isMilitary ? 'military retirement' : 'pension'}?</label>
             <div className="flex gap-4">
               {['Yes', 'No'].map(opt => (
                 <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
@@ -699,11 +778,8 @@ function SpouseRetirementSection() {
           {form.spouseHasPension && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label">Monthly pension amount ($)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input type="number" className="input-field pl-7" value={form.spousePensionMonthlyAmount || ''} onChange={e => updateField('spousePensionMonthlyAmount', parseFloat(e.target.value) || 0)} placeholder="2,000" />
-                </div>
+                <label className="label">Monthly amount ($)</label>
+                <MoneyInput value={form.spousePensionMonthlyAmount || 0} onChange={v => updateField('spousePensionMonthlyAmount', v)} placeholder="2,000" />
               </div>
               <div>
                 <label className="label">COLA</label>

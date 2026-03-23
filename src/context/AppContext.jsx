@@ -77,6 +77,7 @@ const initialForm = {
   additionalPlanCount: 0,
   additionalPlans: [],
   priorEmployer401kBalance: 0,
+  hasTraditionalIRA: 'no',          // 'both' | 'just_me' | 'just_spouse' | 'no'
   traditionalIRABalance: 0,
   traditionalIRAContrib: 0,
   spouseTraditionalIRABalance: 0,
