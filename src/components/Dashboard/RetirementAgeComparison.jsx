@@ -79,7 +79,9 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0, ssAtFRAMonthly = 0 
 
       return {
         age,
-        serviceYears: typeof serviceYears === 'number' ? serviceYears.toFixed(1) : '--',
+        // Use result.totalService (civilian + military buyback + sick leave) so the
+        // displayed years match the pension amount shown in the same row.
+        serviceYears: typeof result.totalService === 'number' ? result.totalService.toFixed(1) : '--',
         netMonthly: result.netMonthlyAnnuity || 0,
         srsMonthly: result.srsMonthly || 0,
         ssMonthly,

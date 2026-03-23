@@ -1,6 +1,7 @@
 import { useForm } from '../../context/AppContext.jsx'
 import { SliderWithInput } from '../common/SliderWithInput.jsx'
 import { HelpTooltip, HelpAccordion } from '../common/HelpTooltip.jsx'
+import { MoneyInput } from '../common/MoneyInput.jsx'
 import { VA_RATING_OPTIONS, getVAMonthlyBenefit, getVARatingLabel } from '../../data/vaBenefitTable.js'
 import { formatCurrency } from '../../utils/formatters.js'
 
@@ -31,17 +32,11 @@ export default function Step4RealEstate() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">Current home value ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7" value={form.homeValue || ''} onChange={e => updateField('homeValue', parseFloat(e.target.value) || 0)} placeholder="400,000" />
-            </div>
+            <MoneyInput value={form.homeValue || 0} onChange={v => updateField('homeValue', v)} placeholder="400,000" />
           </div>
           <div>
             <label className="label">Remaining mortgage balance ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7" value={form.mortgageBalance || ''} onChange={e => updateField('mortgageBalance', parseFloat(e.target.value) || 0)} placeholder="250,000" />
-            </div>
+            <MoneyInput value={form.mortgageBalance || 0} onChange={v => updateField('mortgageBalance', v)} placeholder="250,000" />
           </div>
         </div>
 
@@ -93,10 +88,7 @@ export default function Step4RealEstate() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Target retirement home budget ($)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input type="number" className="input-field pl-7" value={form.newHomeBudget || ''} onChange={e => updateField('newHomeBudget', parseFloat(e.target.value) || 0)} placeholder="350,000" />
-              </div>
+              <MoneyInput value={form.newHomeBudget || 0} onChange={v => updateField('newHomeBudget', v)} placeholder="350,000" />
             </div>
             {form.retirementHomePlan === 'sell_buy' && (
               <div>
@@ -137,10 +129,7 @@ export default function Step4RealEstate() {
                   {f.label}
                   {f.help && <HelpTooltip content={f.help} className="ml-1" />}
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input type="number" className="input-field pl-7" value={form[f.key] || ''} onChange={e => updateField(f.key, parseFloat(e.target.value) || 0)} placeholder="0" />
-                </div>
+                <MoneyInput value={form[f.key] || 0} onChange={v => updateField(f.key, v)} placeholder="0" />
               </div>
             ))}
             {form.rentalMonthlyGross > 0 && (
@@ -200,10 +189,7 @@ export default function Step4RealEstate() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
               <div>
                 <label className="label">Annual part-time income ($)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input type="number" className="input-field pl-7" value={form.partTimeAnnualAmount || ''} onChange={e => updateField('partTimeAnnualAmount', parseFloat(e.target.value) || 0)} />
-                </div>
+                <MoneyInput value={form.partTimeAnnualAmount || 0} onChange={v => updateField('partTimeAnnualAmount', v)} />
               </div>
               <SliderWithInput
                 label="For how many years?"
@@ -227,10 +213,7 @@ export default function Step4RealEstate() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
                   <div>
                     <label className="label">Spouse annual income ($)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                      <input type="number" className="input-field pl-7" value={form.spouseAnnualIncome || ''} onChange={e => updateField('spouseAnnualIncome', parseFloat(e.target.value) || 0)} />
-                    </div>
+                    <MoneyInput value={form.spouseAnnualIncome || 0} onChange={v => updateField('spouseAnnualIncome', v)} />
                   </div>
                   <SliderWithInput
                     label="Years until spouse retires"
@@ -254,10 +237,7 @@ export default function Step4RealEstate() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
               <div>
                 <label className="label">Estimated amount ($)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input type="number" className="input-field pl-7" value={form.inheritanceAmount || ''} onChange={e => updateField('inheritanceAmount', parseFloat(e.target.value) || 0)} />
-                </div>
+                <MoneyInput value={form.inheritanceAmount || 0} onChange={v => updateField('inheritanceAmount', v)} />
               </div>
               <div>
                 <label className="label">Approximate year</label>
@@ -272,9 +252,8 @@ export default function Step4RealEstate() {
             Other pension or annuity (annual, $)
             <HelpTooltip content="Any other guaranteed income source: a state/local government pension, a private sector defined-benefit pension, an annuity you purchased, a trust distribution, or spousal pension. Enter the annual amount in today's dollars." className="ml-1" />
           </label>
-          <div className="relative md:w-48">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-            <input type="number" className="input-field pl-7" value={form.otherPensionAnnuity || ''} onChange={e => updateField('otherPensionAnnuity', parseFloat(e.target.value) || 0)} placeholder="0" />
+          <div className="md:w-48">
+            <MoneyInput value={form.otherPensionAnnuity || 0} onChange={v => updateField('otherPensionAnnuity', v)} placeholder="0" />
           </div>
         </div>
 

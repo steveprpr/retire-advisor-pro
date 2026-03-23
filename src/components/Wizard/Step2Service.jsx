@@ -1,6 +1,7 @@
 import { useForm } from '../../context/AppContext.jsx'
 import { HelpTooltip, HelpAccordion } from '../common/HelpTooltip.jsx'
 import { SliderWithInput } from '../common/SliderWithInput.jsx'
+import { MoneyInput } from '../common/MoneyInput.jsx'
 import { formatCurrency } from '../../utils/formatters.js'
 import { computeAutoHigh3, computeServiceYearsAtRetirement, getMRADisplay } from '../../utils/federalCalculations.js'
 
@@ -171,12 +172,21 @@ export default function Step2Service() {
               )}
             </div>
             <div className="flex flex-col justify-center">
-              {autoServiceYears != null ? (
-                <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-[#2E6DB4]/30 rounded-lg">
-                  <div className="text-2xl font-bold text-[#1B3A6B] dark:text-blue-300">{autoServiceYears.toFixed(1)} yrs</div>
-                  <div className="text-xs text-gray-500 mt-0.5">projected at retirement (age {form.targetRetirementAge || 60})</div>
-                </div>
-              ) : (
+              {autoServiceYears != null ? (() => {
+                const milYears = form.militaryService === 'deposit_paid' ? (form.militaryServiceYears || 0) : 0
+                const totalYrs = autoServiceYears + milYears
+                return (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-[#2E6DB4]/30 rounded-lg">
+                    <div className="text-2xl font-bold text-[#1B3A6B] dark:text-blue-300">{totalYrs.toFixed(1)} yrs</div>
+                    <div className="text-xs text-gray-500 mt-0.5">projected at retirement (age {form.targetRetirementAge || 60})</div>
+                    {milYears > 0 && (
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                        incl. {milYears} yr military buyback
+                      </div>
+                    )}
+                  </div>
+                )
+              })() : (
                 <p className="text-sm text-gray-400 dark:text-gray-600">Enter start year to auto-calculate</p>
               )}
             </div>
@@ -254,10 +264,7 @@ export default function Step2Service() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">Current salary ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7" value={form.currentSalary || ''} onChange={e => updateField('currentSalary', parseFloat(e.target.value))} placeholder="100,000" />
-            </div>
+            <MoneyInput value={form.currentSalary || 0} onChange={v => updateField('currentSalary', v)} placeholder="100,000" />
           </div>
           <div>
             <label className="label">
@@ -266,10 +273,7 @@ export default function Step2Service() {
             </label>
             {form.high3Override ? (
               <>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input type="number" className="input-field pl-7" value={form.high3Salary || ''} onChange={e => updateField('high3Salary', parseFloat(e.target.value))} placeholder="95,000" />
-                </div>
+                <MoneyInput value={form.high3Salary || 0} onChange={v => updateField('high3Salary', v)} placeholder="95,000" />
                 <button type="button" onClick={() => updateField('high3Override', false)} className="text-xs text-blue-600 hover:underline mt-1">
                   ← Use auto-estimate instead
                 </button>
@@ -353,10 +357,7 @@ function PrivateSectorSection({ isDivorced }) {
         </div>
         <div>
           <label className="label">Current salary ($)</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-            <input type="number" className="input-field pl-7" value={form.currentSalary || ''} onChange={e => updateField('currentSalary', parseFloat(e.target.value))} placeholder="100,000" />
-          </div>
+          <MoneyInput value={form.currentSalary || 0} onChange={v => updateField('currentSalary', v)} placeholder="100,000" />
         </div>
       </div>
       <SliderWithInput
@@ -383,10 +384,7 @@ function PrivateSectorSection({ isDivorced }) {
           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Monthly pension amount ($)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input type="number" className="input-field pl-7" value={form.pensionMonthlyAmount || ''} onChange={e => updateField('pensionMonthlyAmount', parseFloat(e.target.value))} placeholder="2,000" />
-              </div>
+              <MoneyInput value={form.pensionMonthlyAmount || 0} onChange={v => updateField('pensionMonthlyAmount', v)} placeholder="2,000" />
             </div>
             <div>
               <label className="label">Cost-of-living adjustment (COLA)</label>

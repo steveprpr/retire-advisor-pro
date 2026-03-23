@@ -1,6 +1,7 @@
 import { useForm } from '../../context/AppContext.jsx'
 import { HelpTooltip, HelpAccordion } from '../common/HelpTooltip.jsx'
 import { SliderWithInput } from '../common/SliderWithInput.jsx'
+import { MoneyInput } from '../common/MoneyInput.jsx'
 import { BackdoorRothBadge } from '../common/SmartBadge.jsx'
 import { formatCurrency } from '../../utils/formatters.js'
 import { IRS_LIMITS } from '../../config/defaults.js'
@@ -57,17 +58,11 @@ export default function Step3Savings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">Traditional (pre-tax) balance ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7" value={form.tspTraditionalBalance || ''} onChange={e => updateField('tspTraditionalBalance', parseFloat(e.target.value) || 0)} placeholder="150,000" />
-            </div>
+            <MoneyInput value={form.tspTraditionalBalance || 0} onChange={v => updateField('tspTraditionalBalance', v)} placeholder="150,000" />
           </div>
           <div>
             <label className="label">Roth balance ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7" value={form.tspRothBalance || ''} onChange={e => updateField('tspRothBalance', parseFloat(e.target.value) || 0)} placeholder="0" />
-            </div>
+            <MoneyInput value={form.tspRothBalance || 0} onChange={v => updateField('tspRothBalance', v)} placeholder="0" />
           </div>
         </div>
         {(form.tspTraditionalBalance || 0) + (form.tspRothBalance || 0) > 0 && (
@@ -86,17 +81,11 @@ export default function Step3Savings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">Your annual Traditional contribution ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7" value={form.annualContribTraditional || ''} onChange={e => updateField('annualContribTraditional', parseFloat(e.target.value) || 0)} placeholder="23,500" />
-            </div>
+            <MoneyInput value={form.annualContribTraditional || 0} onChange={v => updateField('annualContribTraditional', v)} placeholder="23,500" />
           </div>
           <div>
             <label className="label">Your annual Roth contribution ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" className="input-field pl-7" value={form.annualContribRoth || ''} onChange={e => updateField('annualContribRoth', parseFloat(e.target.value) || 0)} placeholder="0" />
-            </div>
+            <MoneyInput value={form.annualContribRoth || 0} onChange={v => updateField('annualContribRoth', v)} placeholder="0" />
           </div>
         </div>
 
@@ -221,10 +210,7 @@ export default function Step3Savings() {
                         Your annual contribution ($)
                         <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra + (isCatchup ? LIMITS.rothCatchup : 0))}</span>
                       </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                        <input type="number" className="input-field pl-7" value={form.annualRothIRAContrib || ''} onChange={e => updateField('annualRothIRAContrib', parseFloat(e.target.value) || 0)} placeholder="7,000" />
-                      </div>
+                      <MoneyInput value={form.annualRothIRAContrib || 0} onChange={v => updateField('annualRothIRAContrib', v)} placeholder="7,000" />
                     </div>
                   </div>
                   <BackdoorRothBadge income={form.currentSalary} />
@@ -239,10 +225,7 @@ export default function Step3Savings() {
                         Spouse's annual contribution ($)
                         <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra)}</span>
                       </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                        <input type="number" className="input-field pl-7" value={form.annualSpouseRothIRAContrib || ''} onChange={e => updateField('annualSpouseRothIRAContrib', parseFloat(e.target.value) || 0)} placeholder="7,000" />
-                      </div>
+                      <MoneyInput value={form.annualSpouseRothIRAContrib || 0} onChange={v => updateField('annualSpouseRothIRAContrib', v)} placeholder="7,000" />
                     </div>
                   </div>
                   <BackdoorRothBadge income={form.spouseCurrentSalary} />
@@ -257,10 +240,7 @@ export default function Step3Savings() {
                       Annual contribution ($)
                       <span className="badge-blue ml-2">{CURRENT_YEAR} limit: {formatCurrency(LIMITS.rothIra + (isCatchup ? LIMITS.rothCatchup : 0))}</span>
                     </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                      <input type="number" className="input-field pl-7" value={form.annualRothIRAContrib || ''} onChange={e => updateField('annualRothIRAContrib', parseFloat(e.target.value) || 0)} placeholder="7,000" />
-                    </div>
+                      <MoneyInput value={form.annualRothIRAContrib || 0} onChange={v => updateField('annualRothIRAContrib', v)} placeholder="7,000" />
                   </div>
                 </div>
                 <BackdoorRothBadge income={form.currentSalary} />
@@ -608,17 +588,7 @@ function DollarField({ label, fieldKey, form, updateField, helpText }) {
   return (
     <div>
       <label className="label">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-        <input
-          type="number"
-          className="input-field pl-7"
-          value={form[fieldKey] || ''}
-          onChange={e => updateField(fieldKey, parseFloat(e.target.value) || 0)}
-          placeholder="0"
-          min="0"
-        />
-      </div>
+      <MoneyInput value={form[fieldKey] || 0} onChange={v => updateField(fieldKey, v)} placeholder="0" />
       {helpText && <p className="help-text">{helpText}</p>}
     </div>
   )
