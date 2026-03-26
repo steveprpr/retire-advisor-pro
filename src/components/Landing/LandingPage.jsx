@@ -1,4 +1,5 @@
 import { useUI } from '../../context/AppContext.jsx'
+import { SupportBanner } from '../common/SupportBanner.jsx'
 
 export default function LandingPage() {
   const { dispatch } = useUI()
@@ -73,6 +74,11 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Support banner */}
+        <div className="mb-6">
+          <SupportBanner variant="landing" />
         </div>
 
         {/* CTA + privacy */}

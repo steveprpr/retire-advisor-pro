@@ -5,6 +5,7 @@ import { useUI, useForm, useAssumptions, useAppState } from '../../context/AppCo
 import { useCalculations } from '../../context/CalculationsContext.jsx'
 import { useReportStream } from '../../hooks/useReportStream.js'
 import { formatCurrency } from '../../utils/formatters.js'
+import { SupportBanner } from '../common/SupportBanner.jsx'
 import {
   Chart1IncomeWaterfall,
   Chart2PortfolioGrowth,
@@ -224,6 +225,13 @@ export default function ReportView() {
               isStreaming={isStreaming}
             />
           </ReportErrorBoundary>
+
+          {/* Support banner — shown once report finishes streaming */}
+          {!isStreaming && content && (
+            <div className="no-print">
+              <SupportBanner variant="report" />
+            </div>
+          )}
 
           {/* Regenerate button */}
           {!isStreaming && (
