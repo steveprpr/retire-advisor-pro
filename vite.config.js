@@ -11,5 +11,11 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, '/.netlify/functions'),
       }
     }
-  }
+  },
+  test: {
+    environment: 'node',
+    globals: true,
+    include: ['src/__tests__/**/*.test.js'],
+    reporters: ['verbose'],
+  },
 })
