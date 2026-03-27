@@ -492,41 +492,39 @@ function RothConversionCard({ rothConversion }) {
 
 // ── Net Worth Over Time ────────────────────────────────────────────────────────
 function NetWorthChart({ calculations }) {
-  const { tsp, roth, home, portfolio, baseValues, assumptions } = calculations
+  const { tsp, roth, home, portfolio, surplus, baseValues, assumptions } = calculations
   const { form } = useForm()
 
   const currentAge = baseValues?.currentAge ?? 50
   const retirementAge = baseValues?.retirementAge ?? 60
-  const lifeExpectancy = baseValues?.lifeExpectancy ?? 90
   const yearsToRetirement = baseValues?.yearsToRetirement ?? 10
   const yearsInRetirement = baseValues?.yearsInRetirement ?? 30
 
-  // Build data: accumulation phase (today → retirement) + drawdown phase (retirement → LE)
-  const data = []
-
-  // ── Accumulation phase ──
-  const tspYBY = tsp?.yearByYear ?? []
   const homeGrowthRate = assumptions?.homeAppreciationRate ?? 0.03
   const homeNow = home?.currentValue ?? 0
   const mortgageNow = form.mortgageBalance || 0
+  const reinvestRate = assumptions?.surplusReinvestmentReturn ?? 0.05
+  const proceedsRate = assumptions?.portfolioDrawdownReturn ?? 0.05
 
+  // Annual surplus available to reinvest (phase 2, after expenses)
+  const surplusAnnual = Math.max(0, surplus?.phase2Surplus ?? 0)
+  // Lump-sum home sale proceeds at retirement
+  const homeProceeds = home?.cashAfterPurchase ?? 0
+
+  const data = []
+
+  // ── Accumulation phase (today → retirement) ──
+  const tspYBY = tsp?.yearByYear ?? []
   for (let y = 0; y < yearsToRetirement; y++) {
     const age = currentAge + y
     const tspVal = tspYBY[y]?.total ?? 0
     const homeVal = homeNow * Math.pow(1 + homeGrowthRate, y)
-    // Simple mortgage reduction estimate
     const mortgageVal = Math.max(0, mortgageNow * Math.pow(0.97, y))
     const homeEquity = Math.max(0, homeVal - mortgageVal)
-    data.push({
-      age,
-      label: `Age ${age}`,
-      Portfolio: Math.round(tspVal),
-      'Home Equity': Math.round(homeEquity),
-      Total: Math.round(tspVal + homeEquity),
-    })
+    data.push({ age, Portfolio: Math.round(tspVal), 'Home Equity': Math.round(homeEquity), 'Reinvested Surplus': 0 })
   }
 
-  // ── Drawdown phase ──
+  // ── Drawdown phase (retirement → life expectancy) ──
   const tspDrawdown = portfolio?.tspDrawdown ?? []
   const homeAtRetirement = home?.valueAtRetirement ?? 0
   const mortgageAtRetirement = home?.mortgageAtRetirement ?? 0
@@ -536,26 +534,32 @@ function NetWorthChart({ calculations }) {
   for (let y = 0; y < yearsInRetirement; y++) {
     const age = retirementAge + y
     const tspVal = tspDrawdown[y]?.balance ?? 0
-    const rothVal = Math.max(0, (roth?.balance ?? 0) * Math.pow(1 + (assumptions?.rothIRAReturnRate ?? 0.07) - ((roth?.annualIncome ?? 0) / Math.max(roth?.balance ?? 1, 1)), y))
+    const rothRate = (assumptions?.rothIRAReturnRate ?? 0.07) - ((roth?.annualIncome ?? 0) / Math.max(roth?.balance ?? 1, 1))
+    const rothVal = Math.max(0, (roth?.balance ?? 0) * Math.pow(1 + rothRate, y))
     const portfolioVal = Math.max(0, tspVal + rothVal)
+
     let homeEquity = 0
     if (!isSelling) {
       homeEquity = homeEquityAtRetirement * Math.pow(1 + homeGrowthRate, y)
     } else if (form.retirementHomePlan === 'sell_buy' && (form.newHomeBudget || 0) > 0) {
       homeEquity = (form.newHomeBudget || 0) * Math.pow(1 + homeGrowthRate, y)
     }
+
+    // FV of annual surplus reinvested (annuity) + lump-sum home proceeds grown
+    const surplusAccum = surplusAnnual > 0 && y > 0
+      ? surplusAnnual * ((Math.pow(1 + reinvestRate, y) - 1) / reinvestRate)
+      : 0
+    const proceedsAccum = homeProceeds > 0 ? homeProceeds * Math.pow(1 + proceedsRate, y) : 0
+
     data.push({
       age,
-      label: `Age ${age}`,
       Portfolio: Math.round(portfolioVal),
       'Home Equity': Math.round(homeEquity),
-      Total: Math.round(portfolioVal + homeEquity),
+      'Reinvested Surplus': Math.round(surplusAccum + proceedsAccum),
     })
   }
 
   if (data.length < 2) return null
-
-  const retirementIdx = data.findIndex(d => d.age === retirementAge)
 
   return (
     <div className="card p-4">
@@ -563,7 +567,7 @@ function NetWorthChart({ calculations }) {
         <div>
           <h3 className="font-semibold text-[#1B3A6B] dark:text-blue-300">Net Worth Over Time</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Portfolio (TSP + Roth) + home equity · accumulation then drawdown
+            Portfolio + home equity + reinvested surplus · matches Legacy estimate at life expectancy
           </p>
         </div>
       </div>
@@ -578,6 +582,10 @@ function NetWorthChart({ calculations }) {
               <stop offset="5%" stopColor={COLORS.green} stopOpacity={0.4} />
               <stop offset="95%" stopColor={COLORS.green} stopOpacity={0.05} />
             </linearGradient>
+            <linearGradient id="nwSurplusGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLORS.sky} stopOpacity={0.4} />
+              <stop offset="95%" stopColor={COLORS.sky} stopOpacity={0.05} />
+            </linearGradient>
           </defs>
           <XAxis
             dataKey="age"
@@ -585,7 +593,6 @@ function NetWorthChart({ calculations }) {
             tickLine={false}
             axisLine={false}
             interval={Math.max(1, Math.floor(data.length / 8))}
-            tickFormatter={v => `${v}`}
           />
           <YAxis
             tick={{ fontSize: 10, fill: '#9CA3AF' }}
@@ -600,16 +607,15 @@ function NetWorthChart({ calculations }) {
             contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #E5E7EB' }}
           />
           <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-          {retirementIdx > 0 && (
-            <ReferenceLine
-              x={retirementAge}
-              stroke={COLORS.orange}
-              strokeDasharray="4 2"
-              label={{ value: 'Retire', fontSize: 9, fill: COLORS.orange, position: 'insideTopRight' }}
-            />
-          )}
+          <ReferenceLine
+            x={retirementAge}
+            stroke={COLORS.orange}
+            strokeDasharray="4 2"
+            label={{ value: 'Retire', fontSize: 9, fill: COLORS.orange, position: 'insideTopRight' }}
+          />
           <Area type="monotone" dataKey="Home Equity" stackId="nw" stroke={COLORS.green} fill="url(#nwHomeGrad)" strokeWidth={1.5} dot={false} />
           <Area type="monotone" dataKey="Portfolio" stackId="nw" stroke={COLORS.blue} fill="url(#nwPortGrad)" strokeWidth={2} dot={false} />
+          <Area type="monotone" dataKey="Reinvested Surplus" stackId="nw" stroke={COLORS.sky} fill="url(#nwSurplusGrad)" strokeWidth={1.5} dot={false} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
