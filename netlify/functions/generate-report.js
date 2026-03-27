@@ -10,23 +10,29 @@
  * PRIVACY: request body is never logged. Only model name + timestamp logged.
  */
 
-export const config = { path: '/api/generate-report' }
+export const config = {
+  path: '/api/generate-report',
+  timeout: 26,  // max Netlify synchronous function timeout (seconds)
+}
 
 const RATE_LIMIT_KEY = 'report_count'
 const RATE_LIMIT_MAX = 3
 
-// Fallback chain: fast streaming models only — avoid reasoning models (R1, o1)
-// that have a long "thinking" phase before first token, causing timeouts.
+// Fastest streaming models first — Gemini Flash generates ~300 tok/s vs Claude's ~70 tok/s.
+// At 3500 tokens, Flash finishes in ~12s (well within 26s limit).
+// Avoid reasoning models (R1, o1) — long "thinking" phase causes timeout before first token.
 const MODEL_CHAIN = [
-  'anthropic/claude-sonnet-4-6',
   'google/gemini-2.0-flash-001',
+  'anthropic/claude-sonnet-4-6',
   'deepseek/deepseek-chat',
 ]
 
 // Abort fetch after this many ms with no response (guard against hung upstream)
-const FETCH_TIMEOUT_MS = 55000
+const FETCH_TIMEOUT_MS = 22000
 
-const SYSTEM_PROMPT = `You are RetireAdvisor Pro, an expert federal/civilian retirement planning assistant. Your analysis is thorough, data-driven, and actionable. You never use generic advice — every insight references the specific numbers provided.
+const SYSTEM_PROMPT = `You are RetireAdvisor Pro, an expert federal/civilian retirement planning assistant. Your analysis is data-driven and actionable. Every insight references the specific numbers provided — no generic advice.
+
+IMPORTANT: Be concise. Each section should be 2-4 short paragraphs or a tight bullet list. The entire report must stay under 3500 tokens. Skip subsections that don't apply to this client.
 
 Respond ONLY in the following 10-section format (use these exact headers):
 
@@ -202,7 +208,7 @@ export default async function handler(req, context) {
             body: JSON.stringify({
               model,
               stream: true,
-              max_tokens: 8000,
+              max_tokens: 3500,
               temperature: 0.3,
               messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
