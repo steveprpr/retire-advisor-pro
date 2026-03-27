@@ -118,8 +118,20 @@ export default function Dashboard() {
 function ReadinessScore({ calculations }) {
   const { surplus, portfolio, income, baseValues } = calculations
   const monteCarlo = portfolio?.monteCarloSuccessRate ?? 0
+
+  // Budget surplus score: how well does income cover expenses?
+  // 0 = deep deficit, 50 = break-even, 100 = surplus ≥ 100% of expenses
+  const monthlyExpenses = (surplus?.annualExpenses ?? 0) / 12
+  const phase1SurplusMonthly = surplus?.phase1SurplusMonthly ?? 0
+  const budgetScore = monthlyExpenses > 0
+    ? Math.min(100, Math.max(0, 50 + (phase1SurplusMonthly / monthlyExpenses) * 50))
+    : 50
+
+  // Income coverage vs pre-retirement salary (capped 0–100)
   const replacement = Math.min(100, Math.max(0, income?.replacementRatio ?? 0))
-  const score = Math.round(monteCarlo * 0.6 + replacement * 0.4)
+
+  // Weighted score: 50% portfolio survival + 30% budget surplus + 20% salary replacement
+  const score = Math.round(monteCarlo * 0.5 + budgetScore * 0.3 + replacement * 0.2)
   const isGood = score >= 85
   const isOk = score >= 70
 
@@ -134,15 +146,15 @@ function ReadinessScore({ calculations }) {
   const monthly = (surplus?.afterTaxPhase2 ?? 0) / 12
   const retirementAge = baseValues?.retirementAge ?? 60
 
-  // Actionable tip based on score components
-  const tip = monteCarlo < 75 && replacement >= 80
-    ? `Your portfolio survival rate is low — consider delaying retirement by 1–2 years or reducing withdrawals.`
-    : replacement < 70 && monteCarlo >= 75
-    ? `Your income replacement is below 70% — delaying Social Security to age 70 or working longer could close the gap.`
+  // Actionable tip
+  const tip = monteCarlo < 75 && budgetScore >= 70
+    ? `Your portfolio has a ${100 - monteCarlo}% chance of running out before life expectancy — consider reducing withdrawals or delaying retirement 1–2 years.`
+    : phase1SurplusMonthly < 0
+    ? `You have a Phase 1 income gap of ${formatCurrency(Math.abs(phase1SurplusMonthly))}/mo before Social Security. Consider part-time income or delaying retirement.`
     : !isGood && retirementAge < 62
     ? `Retiring at ${retirementAge} may include an early-retirement penalty. Delaying to age 62+ removes the penalty and allows you to claim Social Security without a reduction.`
     : !isGood
-    ? `Aim for a portfolio survival rate ≥ 85% and income replacement ≥ 80% to reach "On Track" status.`
+    ? `Aim for a portfolio survival rate ≥ 85% and a comfortable monthly surplus to reach "On Track" status.`
     : null
 
   return (
@@ -171,7 +183,7 @@ function ReadinessScore({ calculations }) {
             />
           </div>
           <p className="text-blue-300 text-xs mt-1.5">
-            Score = 60% portfolio survival (Monte Carlo) + 40% income replacement
+            50% portfolio survival · 30% budget surplus · 20% salary coverage
           </p>
           {tip && (
             <p className="text-yellow-200 text-xs mt-2 max-w-xs leading-snug">
@@ -188,9 +200,9 @@ function ReadinessScore({ calculations }) {
             <p className="text-blue-300 text-xs">after-tax (Phase 2)</p>
           </div>
           <div className="text-center">
-            <p className="text-blue-200 text-xs uppercase tracking-wide">Income Coverage</p>
-            <p className="text-white font-bold text-lg mt-0.5">{income?.replacementRatio ?? 0}%</p>
-            <p className="text-blue-300 text-xs">of pre-retirement salary · target ≥80%</p>
+            <p className="text-blue-200 text-xs uppercase tracking-wide">Budget Surplus</p>
+            <p className="text-white font-bold text-lg mt-0.5">{formatCurrency(phase1SurplusMonthly)}/mo</p>
+            <p className="text-blue-300 text-xs">Phase 1 · income minus expenses</p>
           </div>
           <div className="text-center">
             <p className="text-blue-200 text-xs uppercase tracking-wide">Portfolio Survival</p>
