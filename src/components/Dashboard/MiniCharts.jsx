@@ -38,7 +38,13 @@ export function PortfolioMiniChart({ chartData }) {
           axisLine={false}
           interval="preserveStartEnd"
         />
-        <YAxis hide />
+        <YAxis
+          tick={{ fontSize: 9, fill: '#9CA3AF' }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={v => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : `$${(v / 1000).toFixed(0)}k`}
+          width={38}
+        />
         <Tooltip
           formatter={(v) => formatCurrency(v, { compact: true })}
           labelFormatter={(l) => `Year ${l}`}
@@ -67,7 +73,7 @@ export function PortfolioMiniChart({ chartData }) {
 }
 
 // ── Income Breakdown Mini Chart ──────────────────────────────────────────────
-export function IncomeMiniChart({ fers, ss, tsp, va, chartData }) {
+export function IncomeMiniChart({ fers, ss, tsp, va, income, chartData }) {
   const data = useMemo(() => {
     if (chartData?.incomeWaterfall?.length) {
       // Use first retirement-phase data point
@@ -75,20 +81,26 @@ export function IncomeMiniChart({ fers, ss, tsp, va, chartData }) {
       if (point) {
         return [
           { label: 'FERS/Pension', value: point.fers ?? 0, color: COLORS.navy },
-          { label: 'Social Sec.', value: point.ss ?? 0, color: COLORS.blue },
-          { label: 'TSP/Portfolio', value: point.tsp ?? 0, color: COLORS.sky },
-          { label: 'VA Benefit', value: point.va ?? 0, color: COLORS.green },
+          { label: 'SRS Bridge',   value: point.srs ?? 0,  color: '#059669' },
+          { label: 'Social Sec.',  value: point.ss ?? 0,   color: COLORS.blue },
+          { label: 'Spouse SS',    value: point.spouseSS ?? 0, color: '#60A5FA' },
+          { label: 'TSP/Portfolio',value: point.tsp ?? 0,  color: COLORS.sky },
+          { label: 'VA Benefit',   value: point.va ?? 0,   color: COLORS.green },
         ].filter(d => d.value > 0)
       }
     }
     // Fallback to raw calc values
+    const srsMonthly = fers?.hasSRS ? (fers?.srsMonthly ?? 0) : 0
+    const spouseSSMonthly = (ss?.spousalAnnual ?? 0) / 12
     return [
-      { label: 'FERS/Pension', value: fers?.monthlyAnnuity ?? 0, color: COLORS.navy },
-      { label: 'Social Sec.',  value: ss?.monthlyBenefit ?? 0,   color: COLORS.blue },
-      { label: 'TSP/Portfolio',value: tsp?.monthlyWithdrawal ?? 0, color: COLORS.sky },
-      { label: 'VA Benefit',   value: va?.monthlyBenefit ?? 0,   color: COLORS.green },
+      { label: 'FERS/Pension', value: fers?.monthlyAnnuity ?? 0,             color: COLORS.navy },
+      { label: 'SRS Bridge',   value: srsMonthly,                             color: '#059669' },
+      { label: 'Social Sec.',  value: ss?.selectedMonthly ?? 0,               color: COLORS.blue },
+      { label: 'Spouse SS',    value: spouseSSMonthly,                        color: '#60A5FA' },
+      { label: 'TSP/Portfolio',value: (tsp?.annualWithdrawal ?? 0) / 12,      color: COLORS.sky },
+      { label: 'VA Benefit',   value: va?.monthly ?? 0,                       color: COLORS.green },
     ].filter(d => d.value > 0)
-  }, [fers, ss, tsp, va, chartData])
+  }, [fers, ss, tsp, va, income, chartData])
 
   if (!data.length) return <ChartPlaceholder label="Income sources" />
 

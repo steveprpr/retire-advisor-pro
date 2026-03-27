@@ -2,7 +2,6 @@ import { useForm } from '../../context/AppContext.jsx'
 import { SliderWithInput } from '../common/SliderWithInput.jsx'
 import { HelpTooltip, HelpAccordion } from '../common/HelpTooltip.jsx'
 import { MoneyInput } from '../common/MoneyInput.jsx'
-import { VA_RATING_OPTIONS, getVAMonthlyBenefit, getVARatingLabel } from '../../data/vaBenefitTable.js'
 import { formatCurrency } from '../../utils/formatters.js'
 
 const HOME_PLANS = [
@@ -16,14 +15,12 @@ const HOME_PLANS = [
 
 export default function Step4RealEstate() {
   const { form, updateField } = useForm()
-  const isMarried = form.maritalStatus === 'married'
-  const vaMonthly = getVAMonthlyBenefit(form.vaRating || 0, isMarried)
   const selling = form.retirementHomePlan === 'sell_buy' || form.retirementHomePlan === 'sell_rent'
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-gray-600 dark:text-gray-400">
-        Real estate and other income sources can meaningfully reduce how much you need to draw from savings. Tell us about your home, any rental income, VA disability benefits, and other money coming in so your plan reflects your full financial picture.
+        Real estate, Social Security, and other income sources can meaningfully reduce how much you need to draw from savings. Tell us about your home, Social Security strategy, rental income, and other money coming in so your plan reflects your full financial picture.
       </p>
 
       {/* Primary home */}
@@ -144,38 +141,6 @@ export default function Step4RealEstate() {
         )}
       </div>
 
-      {/* VA disability */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
-        <h3 className="font-medium text-gray-800 dark:text-gray-200">VA disability</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="label">
-              Current VA disability rating
-              <HelpTooltip content="VA disability compensation is 100% tax-free and excluded from income calculations. It also typically receives COLA increases each year." className="ml-1" />
-            </label>
-            <select className="input-field" value={form.vaRating || 0} onChange={e => updateField('vaRating', parseInt(e.target.value))}>
-              {VA_RATING_OPTIONS.map(r => (
-                <option key={r} value={r}>{r}%{r === 0 ? ' (no disability)' : ''}</option>
-              ))}
-            </select>
-            {form.vaRating > 0 && (
-              <p className="help-text text-[#1D9E75]">{getVARatingLabel(form.vaRating)} — 2024 rate: ~{formatCurrency(vaMonthly)}/mo (tax-free)</p>
-            )}
-          </div>
-          <div>
-            <label className="label">
-              Pursuing VA rating upgrade?
-              <HelpTooltip content="Veterans can file a claim for a higher disability rating if their condition has worsened. A rating increase means higher tax-free monthly compensation. For example, going from 70% to 100% roughly triples the monthly benefit." className="ml-1" />
-            </label>
-            <select className="input-field" value={form.vaPursuingUpgrade || 'no'} onChange={e => updateField('vaPursuingUpgrade', e.target.value)}>
-              <option value="no">No</option>
-              <option value="yes">Yes — planning to file</option>
-              <option value="in_process">In process — claim filed</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* Other income sources */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Other income in retirement</h3>
@@ -263,6 +228,73 @@ export default function Step4RealEstate() {
           <p className="mt-2"><strong>Cons:</strong> Reduces the equity available to heirs. Interest accrues over time, growing the loan balance. Requires the home to remain your primary residence and you must maintain it and pay property taxes/insurance.</p>
           <p className="mt-2">Best suited for retirees who are equity-rich but cash-poor and plan to stay in their home long-term.</p>
         </HelpAccordion>
+      </div>
+
+      {/* Social Security */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
+        <h3 className="font-medium text-gray-800 dark:text-gray-200">Social Security</h3>
+
+        <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-900 dark:text-blue-200 space-y-1">
+          <p className="font-medium">How to find your Social Security estimate:</p>
+          <ol className="list-decimal list-inside space-y-0.5 text-blue-800 dark:text-blue-300">
+            <li>Go to <a href="https://www.ssa.gov/myaccount" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-blue-600">ssa.gov/myaccount</a> and sign in (or create a free account)</li>
+            <li>Click <strong>"Estimated Benefits"</strong> in the left menu</li>
+            <li>Find the <strong>"Full Retirement Age"</strong> column — enter that amount below</li>
+          </ol>
+          <p className="text-blue-700 dark:text-blue-400 text-xs">If you leave this blank, we'll estimate it from your salary history — entering your actual SSA figure gives a more accurate plan.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="label">
+              Your estimated SS benefit at FRA ($)
+              <HelpTooltip content="Enter the 'Full Retirement Age' monthly benefit from your SSA statement at ssa.gov/myaccount. If left blank, we estimate it from your current salary and career history." className="ml-1" />
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <input type="number" className="input-field pl-7" value={form.ssBenefitAtFRA || ''} onChange={e => updateField('ssBenefitAtFRA', parseFloat(e.target.value) || 0)} placeholder="2,000" />
+            </div>
+            <p className="help-text">Leave blank to use our built-in estimator</p>
+            {form.ssBenefitAtFRA > 0 && (
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                <div>At 62: ~{formatCurrency(form.ssBenefitAtFRA * 0.75)}/mo</div>
+                <div>At FRA: {formatCurrency(form.ssBenefitAtFRA)}/mo</div>
+                <div>At 70: ~{formatCurrency(form.ssBenefitAtFRA * 1.24)}/mo</div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="label">SS claiming strategy</label>
+            <select className="input-field" value={form.ssClaimingStrategy} onChange={e => updateField('ssClaimingStrategy', e.target.value)}>
+              <option value="62">Claim at 62 (earliest — reduced benefit)</option>
+              <option value="fra">Claim at FRA (~67 for most)</option>
+              <option value="70">Delay to 70 (maximum benefit)</option>
+              <option value="unsure">Not sure — show break-even analysis</option>
+            </select>
+          </div>
+        </div>
+
+        {isMarried && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Spouse SS benefit at FRA ($)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <input type="number" className="input-field pl-7" value={form.spouseSSBenefitAtFRA || ''} onChange={e => updateField('spouseSSBenefitAtFRA', parseFloat(e.target.value) || 0)} placeholder="1,500" />
+              </div>
+            </div>
+            <div>
+              <label className="label">Spouse claiming strategy</label>
+              <select className="input-field" value={form.spouseSSClaimingStrategy} onChange={e => updateField('spouseSSClaimingStrategy', e.target.value)}>
+                <option value="62">At 62</option>
+                <option value="fra">At FRA</option>
+                <option value="70">Delay to 70</option>
+                <option value="unsure">Not sure</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

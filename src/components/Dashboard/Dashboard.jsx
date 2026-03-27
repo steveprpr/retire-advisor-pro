@@ -1,5 +1,5 @@
 import { useCalculations } from '../../context/CalculationsContext.jsx'
-import { useUI, useForm } from '../../context/AppContext.jsx'
+import { useUI, useForm, useAssumptions } from '../../context/AppContext.jsx'
 import { MetricCards, IncomeBreakdownCard, PortfolioHealthCard } from './MetricCards.jsx'
 import { PortfolioMiniChart, IncomeMiniChart, SurplusMiniChart } from './MiniCharts.jsx'
 import { RetirementAgeComparison } from './RetirementAgeComparison.jsx'
@@ -61,7 +61,7 @@ export default function Dashboard() {
         </div>
         <div className="card p-4">
           <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Income Sources</h3>
-          <IncomeMiniChart fers={calc.fers} ss={calc.ss} tsp={calc.tsp} va={calc.va} chartData={calc.chartData} />
+          <IncomeMiniChart fers={calc.fers} ss={calc.ss} tsp={calc.tsp} va={calc.va} income={calc.income} chartData={calc.chartData} />
         </div>
         <div className="card p-4">
           <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Monthly Surplus/Deficit</h3>
@@ -113,7 +113,7 @@ export default function Dashboard() {
 
 // ── Readiness Score Hero ───────────────────────────────────────────────────────
 function ReadinessScore({ calculations }) {
-  const { surplus, portfolio, income } = calculations
+  const { surplus, portfolio, income, baseValues } = calculations
   const monteCarlo = portfolio?.monteCarloSuccessRate ?? 0
   const replacement = Math.min(100, Math.max(0, income?.replacementRatio ?? 0))
   const score = Math.round(monteCarlo * 0.6 + replacement * 0.4)
@@ -129,6 +129,18 @@ function ReadinessScore({ calculations }) {
   const statusBadgeBg = isGood ? 'bg-green-400/25 text-green-100' : isOk ? 'bg-orange-400/25 text-orange-100' : 'bg-red-400/25 text-red-100'
 
   const monthly = (surplus?.afterTaxPhase2 ?? 0) / 12
+  const retirementAge = baseValues?.retirementAge ?? 60
+
+  // Actionable tip based on score components
+  const tip = monteCarlo < 75 && replacement >= 80
+    ? `Your portfolio survival rate is low — consider delaying retirement by 1–2 years or reducing withdrawals.`
+    : replacement < 70 && monteCarlo >= 75
+    ? `Your income replacement is below 70% — delaying SS to age 70 or working longer could close the gap.`
+    : !isGood && retirementAge < 62
+    ? `Retiring at ${retirementAge} is early — delaying to 62 eliminates the FERS early-retirement penalty and adds SRS income.`
+    : !isGood
+    ? `Aim for a Monte Carlo success rate ≥ 85% and income replacement ≥ 80% to reach "On Track" status.`
+    : null
 
   return (
     <div className={`card p-5 bg-gradient-to-br ${statusBg} text-white overflow-hidden relative`}>
@@ -140,7 +152,7 @@ function ReadinessScore({ calculations }) {
       <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* Score */}
         <div>
-          <p className="text-blue-100 text-xs font-semibold uppercase tracking-widest">Retirement Readiness</p>
+          <p className="text-blue-100 text-xs font-semibold uppercase tracking-widest">Retirement Readiness Score</p>
           <div className="flex items-end gap-2 mt-1">
             <span className="text-5xl font-black tabular-nums">{score}</span>
             <span className="text-blue-300 text-lg mb-1.5">/100</span>
@@ -156,8 +168,13 @@ function ReadinessScore({ calculations }) {
             />
           </div>
           <p className="text-blue-300 text-xs mt-1.5">
-            60% Monte Carlo · 40% Replacement Ratio
+            Score = 60% portfolio survival (Monte Carlo) + 40% income replacement
           </p>
+          {tip && (
+            <p className="text-yellow-200 text-xs mt-2 max-w-xs leading-snug">
+              💡 {tip}
+            </p>
+          )}
         </div>
 
         {/* Key metrics */}
@@ -170,12 +187,12 @@ function ReadinessScore({ calculations }) {
           <div className="text-center">
             <p className="text-blue-200 text-xs uppercase tracking-wide">Replacement</p>
             <p className="text-white font-bold text-lg mt-0.5">{income?.replacementRatio ?? 0}%</p>
-            <p className="text-blue-300 text-xs">of pre-retirement</p>
+            <p className="text-blue-300 text-xs">of pre-retirement · target ≥80%</p>
           </div>
           <div className="text-center">
-            <p className="text-blue-200 text-xs uppercase tracking-wide">Success Rate</p>
+            <p className="text-blue-200 text-xs uppercase tracking-wide">Portfolio Survival</p>
             <p className="text-white font-bold text-lg mt-0.5">{monteCarlo}%</p>
-            <p className="text-blue-300 text-xs">Monte Carlo</p>
+            <p className="text-blue-300 text-xs">500 Monte Carlo runs · target ≥85%</p>
           </div>
         </div>
       </div>
@@ -186,6 +203,7 @@ function ReadinessScore({ calculations }) {
 // ── Income Phase Timeline ──────────────────────────────────────────────────────
 function IncomePhaseChart({ calculations }) {
   const { form } = useForm()
+  const { assumptions } = useAssumptions()
   const { fers, ss, tsp, roth, va, baseValues } = calculations
 
   const retirementAge = baseValues?.retirementAge ?? 60
@@ -196,17 +214,31 @@ function IncomePhaseChart({ calculations }) {
   const srsMonthly = fers?.srsMonthly ?? 0
   const hasSRS = fers?.hasSRS ?? false
   const ssMonthly = ss?.selectedMonthly ?? 0
+  const spouseSSMonthly = (ss?.spousalAnnual ?? 0) / 12
   const tspMonthly = (tsp?.annualWithdrawal ?? 0) / 12
   const rothMonthly = (roth?.annualIncome ?? 0) / 12
   const vaMonthly = va?.monthly ?? 0
 
+  // COLA rates: FERS pension grows from age 62; SS grows from claiming age
+  const fersCola = assumptions?.fersCOLARate ?? 0.02
+  const ssCola = assumptions?.ssCOLARate ?? 0.025
+
   const data = []
   for (let age = retirementAge; age <= lifeExpectancy; age++) {
+    // FERS COLA only kicks in at age 62 (OPM rule)
+    const fersColarYears = Math.max(0, age - 62)
+    const pensionWithCola = pensionMonthly * Math.pow(1 + fersCola, fersColarYears)
+
+    // SS COLA applies from the year claiming begins
+    const ssColaYears = age > ssClaimAge ? age - ssClaimAge : 0
+    const ssWithCola = ssMonthly * Math.pow(1 + ssCola, ssColaYears)
+    const spouseSSWithCola = spouseSSMonthly * Math.pow(1 + ssCola, ssColaYears)
+
     data.push({
       age,
-      Pension: Math.round(pensionMonthly),
+      Pension: Math.round(pensionWithCola),
       SRS: hasSRS && age < 62 ? Math.round(srsMonthly) : 0,
-      'Social Security': age >= ssClaimAge ? Math.round(ssMonthly) : 0,
+      'Social Security': age >= ssClaimAge ? Math.round(ssWithCola + spouseSSWithCola) : 0,
       'TSP/Portfolio': Math.round(tspMonthly),
       Roth: Math.round(rothMonthly),
       VA: Math.round(vaMonthly),

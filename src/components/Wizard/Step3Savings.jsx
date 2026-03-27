@@ -106,8 +106,40 @@ export default function Step3Savings() {
           </div>
         </div>
         <div className="text-xs text-gray-500 dark:text-gray-400">
-          2025 combined limit: <strong>{formatCurrency(maxContrib)}</strong>{isCatchup ? ' (catch-up age 50+)' : ''}
+          2025 combined limit: <strong>{formatCurrency(maxContrib)}</strong>{isCatchup ? ' (catch-up age 50+ included)' : ''}
         </div>
+
+        {/* Catch-up planning — only shown for users under 50 */}
+        {!isCatchup && (
+          <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-blue-900 dark:text-blue-200">
+              <input
+                type="checkbox"
+                checked={form.planCatchupAt50 || false}
+                onChange={e => updateField('planCatchupAt50', e.target.checked)}
+                className="accent-[#2E6DB4]"
+              />
+              Plan to maximize catch-up contributions starting at age 50
+              <HelpTooltip content="The IRS allows an extra $7,500/year (2025) in TSP/401k contributions once you turn 50. Enabling this will project a higher balance from age 50 onward, giving you a more accurate retirement estimate." className="ml-1" />
+            </label>
+            {form.planCatchupAt50 && (
+              <div className="ml-6 space-y-1">
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  Extra catch-up contribution starting in <strong>{Math.max(1, 50 - currentAge)} year{Math.max(1, 50 - currentAge) !== 1 ? 's' : ''}</strong> (when you turn 50):
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="md:w-40">
+                    <MoneyInput
+                      value={form.catchupContribAmount ?? LIMITS.catchup}
+                      onChange={v => updateField('catchupContribAmount', v)}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500">/year (IRS limit: {formatCurrency(LIMITS.catchup)})</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <SliderWithInput
@@ -197,6 +229,7 @@ export default function Step3Savings() {
                     <HelpTooltip content="Enter the match percentage for this specific plan." className="ml-1" />
                   </label>
                   <SliderWithInput
+                    label="Match %"
                     value={plan.matchPct || 0}
                     onChange={v => updateAdditionalPlan(i, 'matchPct', v)}
                     min={0}

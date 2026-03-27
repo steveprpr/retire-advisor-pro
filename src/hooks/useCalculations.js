@@ -173,6 +173,12 @@ export function useCalculations(form, assumptions) {
 
     const secondary401kMatchAnnual = additionalPlansMatch
 
+    // Catch-up contributions: extra $7,500/yr (IRS) available at age 50+
+    const catchupAmount = form.catchupContribAmount || 7500
+    const catchupStartYear = (form.planCatchupAt50 && baseValues.currentAge < 50)
+      ? Math.max(1, 50 - baseValues.currentAge)
+      : 0
+
     const projection = computeTSPProjection({
       currentBalance: (form.tspTraditionalBalance || 0) + additionalPreTaxBalance,
       rothBalance: form.tspRothBalance || 0,
@@ -182,6 +188,8 @@ export function useCalculations(form, assumptions) {
       returnRate: assumptions.tspReturnRate,
       yearsToRetirement: baseValues.yearsToRetirement,
       inflationRate: assumptions.inflationRate,
+      catchupContribTraditional: catchupAmount,
+      catchupStartYear,
     })
 
     // Withdrawal income at retirement
@@ -218,9 +226,10 @@ export function useCalculations(form, assumptions) {
     form.additionalPlans, form.additionalPlanCount, form.priorEmployer401kBalance,
     form.traditionalIRABalance, form.traditionalIRAContrib,
     form.spouseTraditionalIRABalance, form.spouseTraditionalIRAContrib,
+    form.planCatchupAt50, form.catchupContribAmount,
     assumptions.tspReturnRate, assumptions.safeWithdrawalRate,
     assumptions.schdYield, assumptions.vymYield, assumptions.jepYield,
-    baseValues.yearsToRetirement, assumptions.inflationRate,
+    baseValues.yearsToRetirement, baseValues.currentAge, assumptions.inflationRate,
   ])
 
   // ── Roth IRA ─────────────────────────────────────────────────────────────

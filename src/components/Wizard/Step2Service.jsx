@@ -4,6 +4,7 @@ import { SliderWithInput } from '../common/SliderWithInput.jsx'
 import { MoneyInput } from '../common/MoneyInput.jsx'
 import { formatCurrency } from '../../utils/formatters.js'
 import { computeAutoHigh3, computeServiceYearsAtRetirement, getMRADisplay } from '../../utils/federalCalculations.js'
+import { VA_RATING_OPTIONS, getVAMonthlyBenefit, getVARatingLabel } from '../../data/vaBenefitTable.js'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -241,6 +242,9 @@ export default function Step2Service() {
         )}
       </div>
 
+      {/* VA Disability */}
+      <VADisabilitySection />
+
       {/* Salary */}
       <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
         <h3 className="font-medium text-gray-800 dark:text-gray-200">Salary</h3>
@@ -382,12 +386,51 @@ function PrivateSectorSection({ isDivorced }) {
         )}
       </div>
 
+      {/* VA Disability */}
+      <VADisabilitySection />
+
       {!isDivorced && <DivorceCourtOrderSection isFederal={false} isDivorced={false} />}
     </div>
   )
 }
 
-// ── Divorce / Court Order Section ────────────────────────────────────────────
+// ── VA Disability Section ─────────────────────────────────────────────────────
+function VADisabilitySection() {
+  const { form, updateField } = useForm()
+  const isMarried = form.maritalStatus === 'married'
+  const vaMonthly = getVAMonthlyBenefit(form.vaRating || 0, isMarried)
+
+  return (
+    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-4">
+      <h3 className="font-medium text-gray-800 dark:text-gray-200">
+        VA disability benefit
+        <HelpTooltip content="VA disability compensation is 100% tax-free and receives annual COLA increases. It is not counted as income for tax purposes and can significantly reduce your need to draw from savings." className="ml-1" />
+      </h3>
+      <div>
+        <label className="label">Current VA disability rating</label>
+        <select
+          className="input-field md:w-56"
+          value={form.vaRating || 0}
+          onChange={e => updateField('vaRating', parseInt(e.target.value))}
+        >
+          {VA_RATING_OPTIONS.map(r => (
+            <option key={r} value={r}>{r}%{r === 0 ? ' (no disability / not applicable)' : ''}</option>
+          ))}
+        </select>
+        {form.vaRating > 0 && (
+          <p className="help-text text-[#1D9E75] mt-1">
+            {getVARatingLabel(form.vaRating)} — 2024 rate: ~{formatCurrency(vaMonthly)}/mo (tax-free)
+          </p>
+        )}
+        {!form.vaRating && (
+          <p className="help-text">Leave at 0% if you have no VA disability rating.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Divorce / Court Order Section ─────────────────────────────────────────────
 function DivorceCourtOrderSection({ isFederal, isDivorced }) {
   const { form, updateField } = useForm()
   const termShort = isFederal ? 'COAP' : 'QDRO'

@@ -27,6 +27,8 @@ export function computeTSPProjection({
   returnRate = 0.065,
   yearsToRetirement = 20,
   inflationRate = 0.025,
+  catchupContribTraditional = 0,
+  catchupStartYear = 0,
 } = {}) {
   if (yearsToRetirement <= 0) return { traditionalBalance: currentBalance, rothBalance, totalBalance: currentBalance + rothBalance }
 
@@ -35,7 +37,9 @@ export function computeTSPProjection({
   const yearByYear = []
 
   for (let y = 1; y <= yearsToRetirement; y++) {
-    trad = (trad + annualContributionTraditional + employerMatchAnnual) * (1 + returnRate)
+    const catchupActive = catchupStartYear > 0 && y >= catchupStartYear
+    const tradContrib = annualContributionTraditional + (catchupActive ? catchupContribTraditional : 0)
+    trad = (trad + tradContrib + employerMatchAnnual) * (1 + returnRate)
     roth = (roth + annualContributionRoth) * (1 + returnRate)
     yearByYear.push({
       year: y,

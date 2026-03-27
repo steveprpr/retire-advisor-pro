@@ -72,8 +72,10 @@ export function IncomeBreakdownCard({ calculations }) {
 
   const streams = [
     { label: 'FERS/Pension', value: components.pensionAnnual, color: '#1B3A6B' },
+    { label: 'SRS Bridge', value: components.srsAnnual, color: '#059669' },
     { label: 'TSP/401k', value: components.tspAnnual, color: '#2E6DB4' },
     { label: 'Social Security', value: components.ssAnnual, color: '#4A9FDF' },
+    { label: 'Spouse SS', value: components.spouseSSAnnual, color: '#60A5FA' },
     { label: 'Roth IRA', value: components.rothAnnual, color: '#1D9E75' },
     { label: 'VA Disability', value: components.vaAnnual, color: '#6B7280' },
     { label: 'Other', value: components.otherAnnual + components.partTimeAnnual, color: '#9CA3AF' },

@@ -16,7 +16,7 @@ const STEPS = [
   { id: 'personal',   label: 'Personal',    short: '1', component: Step1Personal },
   { id: 'service',    label: 'Service',     short: '2', component: Step2Service },
   { id: 'savings',    label: 'Savings',     short: '3', component: Step3Savings },
-  { id: 'realestate', label: 'Real Estate', short: '4', component: Step4RealEstate },
+  { id: 'realestate', label: 'Income & Assets', short: '4', component: Step4RealEstate },
   { id: 'goals',      label: 'Goals',       short: '5', component: Step5Goals },
   { id: 'expenses',   label: 'Expenses',    short: '6', component: Step6Expenses },
   { id: 'legacy',     label: 'Legacy',      short: '7', component: Step7Legacy },
