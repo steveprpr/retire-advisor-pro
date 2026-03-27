@@ -30,43 +30,61 @@ function AppShell() {
 
   const toggleDark = () => dispatch({ type: 'UI/TOGGLE_DARK_MODE' })
   const setTab = (tab) => dispatch({ type: 'UI/SET_TAB', tab })
+  const openAssumptions = () => dispatch({ type: 'UI/TOGGLE_ASSUMPTIONS_PANEL' })
 
   // ── Access gate ─────────────────────────────────────────────────────────────
   if (!accessGranted) {
     // Skip gate entirely if no hash configured (dev mode or unconfigured)
     if (ACCESS_MODE === 'none' || (!CODE_HASH && ACCESS_MODE === 'code')) {
-      // Auto-grant in development or when not configured
       dispatch({ type: 'UI/SET_ACCESS_GRANTED' })
       return null
     }
-
-    if (ACCESS_MODE === 'identity') {
-      return <IdentityGate />
-    }
-
+    if (ACCESS_MODE === 'identity') return <IdentityGate />
     return <CodeGate />
   }
 
-  const openAssumptions = () => dispatch({ type: 'UI/TOGGLE_ASSUMPTIONS_PANEL' })
+  // Shared header shown on every page
+  const header = (
+    <AppHeader
+      onToggleDark={toggleDark}
+      darkMode={ui.darkMode}
+      activeTab={wizardComplete ? activeTab : null}
+      wizardComplete={wizardComplete}
+      onGoHome={() => dispatch({ type: 'UI/SHOW_LANDING' })}
+      onTabChange={(tab) => {
+        if (wizardComplete) {
+          setTab(tab)
+        } else {
+          // Wizard not done yet — dismiss landing to show wizard
+          dispatch({ type: 'UI/DISMISS_LANDING' })
+        }
+      }}
+      onOpenAssumptions={openAssumptions}
+      onEditInputs={() => dispatch({ type: 'UI/REOPEN_WIZARD' })}
+    />
+  )
 
   // ── Landing page ─────────────────────────────────────────────────────────────
   if (ui.showLanding && !wizardComplete) {
-    return <LandingPage />
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        {header}
+        <LandingPage />
+        <AssumptionsPanel />
+        <PrivacyBanner />
+      </div>
+    )
   }
 
   // ── Wizard ──────────────────────────────────────────────────────────────────
   if (!wizardComplete) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <AppHeader
-          onToggleDark={toggleDark}
-          darkMode={ui.darkMode}
-          wizardComplete={false}
-          onGoHome={() => dispatch({ type: 'UI/SHOW_LANDING' })}
-        />
+        {header}
         <main>
           <WizardShell />
         </main>
+        <AssumptionsPanel />
         <PrivacyBanner />
       </div>
     )
@@ -76,23 +94,11 @@ function AppShell() {
   return (
     <CalculationsProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <AppHeader
-          onToggleDark={toggleDark}
-          darkMode={ui.darkMode}
-          showTabs
-          activeTab={activeTab}
-          onTabChange={setTab}
-          wizardComplete={true}
-          onEditInputs={() => dispatch({ type: 'UI/REOPEN_WIZARD' })}
-          onOpenAssumptions={openAssumptions}
-          onGoHome={() => dispatch({ type: 'UI/SHOW_LANDING' })}
-        />
-
+        {header}
         <main className="pb-16">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'report' && <ReportView />}
         </main>
-
         <AssumptionsPanel />
         <PrivacyBanner />
       </div>
@@ -101,14 +107,12 @@ function AppShell() {
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
-function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, onEditInputs, onOpenAssumptions, wizardComplete, onGoHome }) {
-  const { dispatch } = useUI()
-
+function AppHeader({ onToggleDark, darkMode, activeTab, onTabChange, onEditInputs, onOpenAssumptions, wizardComplete, onGoHome }) {
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 no-print">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
 
-        {/* Logo — always clickable, returns to Dashboard if wizard is done */}
+        {/* Logo */}
         <button
           type="button"
           onClick={() => onGoHome?.()}
@@ -126,55 +130,37 @@ function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, o
           </span>
         </button>
 
-        {/* Main nav — only shown after wizard */}
-        {showTabs && (
-          <nav className="flex items-center gap-1 flex-1 justify-center">
-            <NavBtn
-              active={false}
-              onClick={onGoHome}
-              icon="🏠"
-            >
-              Home
-            </NavBtn>
-            <NavBtn
-              active={activeTab === 'dashboard'}
-              onClick={() => onTabChange('dashboard')}
-              icon="📊"
-            >
-              Dashboard
-            </NavBtn>
-            <NavBtn
-              active={activeTab === 'report'}
-              onClick={() => onTabChange('report')}
-              icon="📄"
-            >
-              Report
-            </NavBtn>
-            <NavBtn
-              active={false}
-              onClick={onOpenAssumptions}
-              icon="⚙️"
-            >
-              <span className="hidden sm:inline">Assumptions</span>
-              <span className="sm:hidden">⚙️</span>
-            </NavBtn>
-          </nav>
-        )}
+        {/* Main nav — always visible */}
+        <nav className="flex items-center gap-1 flex-1 justify-center">
+          <NavBtn active={false} onClick={onGoHome} icon="🏠" title="Home">
+            Home
+          </NavBtn>
+          <NavBtn
+            active={activeTab === 'dashboard'}
+            onClick={() => onTabChange('dashboard')}
+            icon="📊"
+            title={wizardComplete ? 'Dashboard' : 'Complete the wizard to view Dashboard'}
+            dimmed={!wizardComplete}
+          >
+            Dashboard
+          </NavBtn>
+          <NavBtn
+            active={activeTab === 'report'}
+            onClick={() => onTabChange('report')}
+            icon="📄"
+            title={wizardComplete ? 'Report' : 'Complete the wizard to view Report'}
+            dimmed={!wizardComplete}
+          >
+            Report
+          </NavBtn>
+          <NavBtn active={false} onClick={onOpenAssumptions} icon="⚙️" title="Assumptions">
+            Assumptions
+          </NavBtn>
+        </nav>
 
         {/* Right controls */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {!showTabs && onGoHome && (
-            <button
-              type="button"
-              onClick={onGoHome}
-              className="btn-ghost text-xs flex items-center gap-1"
-              title="Back to Home"
-            >
-              <span className="hidden sm:inline">🏠 Home</span>
-              <span className="sm:hidden">🏠</span>
-            </button>
-          )}
-          {showTabs && onEditInputs && (
+          {wizardComplete && onEditInputs && (
             <button
               type="button"
               onClick={onEditInputs}
@@ -199,15 +185,18 @@ function AppHeader({ onToggleDark, darkMode, showTabs, activeTab, onTabChange, o
   )
 }
 
-function NavBtn({ active, onClick, icon, children }) {
+function NavBtn({ active, onClick, icon, children, title, dimmed }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={[
         'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1',
         active
           ? 'bg-[#1B3A6B] text-white dark:bg-blue-800'
+          : dimmed
+          ? 'text-gray-300 dark:text-gray-600 hover:text-gray-400 dark:hover:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-not-allowed'
           : 'text-gray-600 dark:text-gray-400 hover:text-[#1B3A6B] dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-800',
       ].join(' ')}
     >
