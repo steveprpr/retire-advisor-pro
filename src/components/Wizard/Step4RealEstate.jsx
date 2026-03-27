@@ -15,6 +15,7 @@ const HOME_PLANS = [
 
 export default function Step4RealEstate() {
   const { form, updateField } = useForm()
+  const isMarried = form.maritalStatus === 'married'
   const selling = form.retirementHomePlan === 'sell_buy' || form.retirementHomePlan === 'sell_rent'
 
   return (
