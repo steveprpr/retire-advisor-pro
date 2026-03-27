@@ -5,7 +5,7 @@ import { PortfolioMiniChart, IncomeMiniChart, SurplusMiniChart } from './MiniCha
 import { RetirementAgeComparison } from './RetirementAgeComparison.jsx'
 import { formatCurrency } from '../../utils/formatters.js'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
+  BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 
@@ -87,6 +87,9 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <StatsGrid calculations={calc} />
 
+      {/* Net Worth Over Time */}
+      <NetWorthChart calculations={calc} />
+
       {/* Roth Conversion Highlight */}
       <RothConversionCard rothConversion={calc.rothConversion} />
 
@@ -135,11 +138,11 @@ function ReadinessScore({ calculations }) {
   const tip = monteCarlo < 75 && replacement >= 80
     ? `Your portfolio survival rate is low — consider delaying retirement by 1–2 years or reducing withdrawals.`
     : replacement < 70 && monteCarlo >= 75
-    ? `Your income replacement is below 70% — delaying SS to age 70 or working longer could close the gap.`
+    ? `Your income replacement is below 70% — delaying Social Security to age 70 or working longer could close the gap.`
     : !isGood && retirementAge < 62
-    ? `Retiring at ${retirementAge} is early — delaying to 62 eliminates the FERS early-retirement penalty and adds SRS income.`
+    ? `Retiring at ${retirementAge} may include an early-retirement penalty. Delaying to age 62+ removes the penalty and allows you to claim Social Security without a reduction.`
     : !isGood
-    ? `Aim for a Monte Carlo success rate ≥ 85% and income replacement ≥ 80% to reach "On Track" status.`
+    ? `Aim for a portfolio survival rate ≥ 85% and income replacement ≥ 80% to reach "On Track" status.`
     : null
 
   return (
@@ -185,9 +188,9 @@ function ReadinessScore({ calculations }) {
             <p className="text-blue-300 text-xs">after-tax (Phase 2)</p>
           </div>
           <div className="text-center">
-            <p className="text-blue-200 text-xs uppercase tracking-wide">Replacement</p>
+            <p className="text-blue-200 text-xs uppercase tracking-wide">Income Coverage</p>
             <p className="text-white font-bold text-lg mt-0.5">{income?.replacementRatio ?? 0}%</p>
-            <p className="text-blue-300 text-xs">of pre-retirement · target ≥80%</p>
+            <p className="text-blue-300 text-xs">of pre-retirement salary · target ≥80%</p>
           </div>
           <div className="text-center">
             <p className="text-blue-200 text-xs uppercase tracking-wide">Portfolio Survival</p>
@@ -219,9 +222,10 @@ function IncomePhaseChart({ calculations }) {
   const rothMonthly = (roth?.annualIncome ?? 0) / 12
   const vaMonthly = va?.monthly ?? 0
 
-  // COLA rates: FERS pension grows from age 62; SS grows from claiming age
+  // COLA rates
   const fersCola = assumptions?.fersCOLARate ?? 0.02
   const ssCola = assumptions?.ssCOLARate ?? 0.025
+  const vaCola = assumptions?.vaCOLARate ?? 0.025
 
   const data = []
   for (let age = retirementAge; age <= lifeExpectancy; age++) {
@@ -234,6 +238,10 @@ function IncomePhaseChart({ calculations }) {
     const ssWithCola = ssMonthly * Math.pow(1 + ssCola, ssColaYears)
     const spouseSSWithCola = spouseSSMonthly * Math.pow(1 + ssCola, ssColaYears)
 
+    // VA COLA applies from retirement
+    const vaColaYears = age - retirementAge
+    const vaWithCola = vaMonthly * Math.pow(1 + vaCola, vaColaYears)
+
     data.push({
       age,
       Pension: Math.round(pensionWithCola),
@@ -241,7 +249,7 @@ function IncomePhaseChart({ calculations }) {
       'Social Security': age >= ssClaimAge ? Math.round(ssWithCola + spouseSSWithCola) : 0,
       'TSP/Portfolio': Math.round(tspMonthly),
       Roth: Math.round(rothMonthly),
-      VA: Math.round(vaMonthly),
+      VA: vaMonthly > 0 ? Math.round(vaWithCola) : 0,
     })
   }
 
@@ -324,41 +332,46 @@ function IncomePhaseChart({ calculations }) {
 
 // ── Stats Grid ─────────────────────────────────────────────────────────────────
 function StatsGrid({ calculations }) {
+  const { form } = useForm()
   const { fers, ss, taxes, income, tsp, portfolio, roth } = calculations
 
   const longevity = portfolio?.longevityYears ?? '?'
   const monteCarlo = portfolio?.monteCarloSuccessRate ?? 0
   const taxRate = (taxes?.overallEffectiveRate ?? 0) * 100
-  const replacement = income?.replacementRatio ?? 0
+
+  // SS: combine your benefit + spouse benefit, show actual claiming age
+  const ssClaimAge = form.ssClaimingStrategy === '62' ? 62 : form.ssClaimingStrategy === '70' ? 70 : Math.round(ss?.fra ?? 67)
+  const spouseSSMonthly = (ss?.spousalAnnual ?? 0) / 12
+  const totalSSMonthly = (ss?.selectedMonthly ?? 0) + spouseSSMonthly
 
   const stats = [
     {
       label: 'FERS / Pension',
       value: formatCurrency(fers?.netMonthlyAnnuity ?? 0),
-      sub: 'monthly net',
+      sub: 'monthly net (after survivor benefit)',
       icon: '🏛️',
       accent: 'navy',
     },
     {
-      label: 'Social Security',
-      value: formatCurrency(ss?.selectedMonthly ?? 0),
-      sub: `at ${ss?.fra ? `age ${Math.floor(ss.fra)}` : 'FRA'}`,
+      label: spouseSSMonthly > 0 ? 'Social Security (you + spouse)' : 'Social Security',
+      value: formatCurrency(totalSSMonthly),
+      sub: `your benefit claimed at age ${ssClaimAge}${spouseSSMonthly > 0 ? ` · +${formatCurrency(spouseSSMonthly)} spouse` : ''}`,
       icon: '🛡️',
       accent: 'blue',
     },
     {
       label: 'Effective Tax Rate',
       value: `${taxRate.toFixed(1)}%`,
-      sub: 'in retirement',
+      sub: 'estimated average in retirement',
       icon: '📋',
       accent: taxRate < 15 ? 'green' : taxRate < 25 ? 'orange' : 'red',
     },
     {
-      label: 'Replacement Ratio',
-      value: `${replacement}%`,
-      sub: 'of pre-retirement income',
+      label: 'Income Coverage',
+      value: `${income?.replacementRatio ?? 0}%`,
+      sub: 'of pre-retirement salary · 80%+ is solid',
       icon: '📈',
-      accent: replacement >= 80 ? 'green' : replacement >= 65 ? 'orange' : 'red',
+      accent: (income?.replacementRatio ?? 0) >= 80 ? 'green' : (income?.replacementRatio ?? 0) >= 65 ? 'orange' : 'red',
     },
     {
       label: 'TSP at Retirement',
@@ -461,6 +474,132 @@ function RothConversionCard({ rothConversion }) {
           Total projected to convert: {formatCurrency(totalConverted, { compact: true })} · Tax-free growth runs to life expectancy
         </p>
       )}
+    </div>
+  )
+}
+
+// ── Net Worth Over Time ────────────────────────────────────────────────────────
+function NetWorthChart({ calculations }) {
+  const { tsp, roth, home, portfolio, baseValues, assumptions } = calculations
+  const { form } = useForm()
+
+  const currentAge = baseValues?.currentAge ?? 50
+  const retirementAge = baseValues?.retirementAge ?? 60
+  const lifeExpectancy = baseValues?.lifeExpectancy ?? 90
+  const yearsToRetirement = baseValues?.yearsToRetirement ?? 10
+  const yearsInRetirement = baseValues?.yearsInRetirement ?? 30
+
+  // Build data: accumulation phase (today → retirement) + drawdown phase (retirement → LE)
+  const data = []
+
+  // ── Accumulation phase ──
+  const tspYBY = tsp?.yearByYear ?? []
+  const homeGrowthRate = assumptions?.homeAppreciationRate ?? 0.03
+  const homeNow = home?.currentValue ?? 0
+  const mortgageNow = form.mortgageBalance || 0
+
+  for (let y = 0; y < yearsToRetirement; y++) {
+    const age = currentAge + y
+    const tspVal = tspYBY[y]?.total ?? 0
+    const homeVal = homeNow * Math.pow(1 + homeGrowthRate, y)
+    // Simple mortgage reduction estimate
+    const mortgageVal = Math.max(0, mortgageNow * Math.pow(0.97, y))
+    const homeEquity = Math.max(0, homeVal - mortgageVal)
+    data.push({
+      age,
+      label: `Age ${age}`,
+      Portfolio: Math.round(tspVal),
+      'Home Equity': Math.round(homeEquity),
+      Total: Math.round(tspVal + homeEquity),
+    })
+  }
+
+  // ── Drawdown phase ──
+  const tspDrawdown = portfolio?.tspDrawdown ?? []
+  const homeAtRetirement = home?.valueAtRetirement ?? 0
+  const mortgageAtRetirement = home?.mortgageAtRetirement ?? 0
+  const homeEquityAtRetirement = Math.max(0, homeAtRetirement - mortgageAtRetirement)
+  const isSelling = ['sell_buy', 'sell_rent'].includes(form.retirementHomePlan)
+
+  for (let y = 0; y < yearsInRetirement; y++) {
+    const age = retirementAge + y
+    const tspVal = tspDrawdown[y]?.balance ?? 0
+    const rothVal = Math.max(0, (roth?.balance ?? 0) * Math.pow(1 + (assumptions?.rothIRAReturnRate ?? 0.07) - ((roth?.annualIncome ?? 0) / Math.max(roth?.balance ?? 1, 1)), y))
+    const portfolioVal = Math.max(0, tspVal + rothVal)
+    let homeEquity = 0
+    if (!isSelling) {
+      homeEquity = homeEquityAtRetirement * Math.pow(1 + homeGrowthRate, y)
+    } else if (form.retirementHomePlan === 'sell_buy' && (form.newHomeBudget || 0) > 0) {
+      homeEquity = (form.newHomeBudget || 0) * Math.pow(1 + homeGrowthRate, y)
+    }
+    data.push({
+      age,
+      label: `Age ${age}`,
+      Portfolio: Math.round(portfolioVal),
+      'Home Equity': Math.round(homeEquity),
+      Total: Math.round(portfolioVal + homeEquity),
+    })
+  }
+
+  if (data.length < 2) return null
+
+  const retirementIdx = data.findIndex(d => d.age === retirementAge)
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-start justify-between mb-1">
+        <div>
+          <h3 className="font-semibold text-[#1B3A6B] dark:text-blue-300">Net Worth Over Time</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Portfolio (TSP + Roth) + home equity · accumulation then drawdown
+          </p>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="nwPortGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.5} />
+              <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0.05} />
+            </linearGradient>
+            <linearGradient id="nwHomeGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLORS.green} stopOpacity={0.4} />
+              <stop offset="95%" stopColor={COLORS.green} stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="age"
+            tick={{ fontSize: 10, fill: '#9CA3AF' }}
+            tickLine={false}
+            axisLine={false}
+            interval={Math.max(1, Math.floor(data.length / 8))}
+            tickFormatter={v => `${v}`}
+          />
+          <YAxis
+            tick={{ fontSize: 10, fill: '#9CA3AF' }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={v => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : `$${(v / 1000).toFixed(0)}k`}
+            width={48}
+          />
+          <Tooltip
+            formatter={(v, name) => [formatCurrency(v, { compact: true }), name]}
+            labelFormatter={l => `Age ${l}`}
+            contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #E5E7EB' }}
+          />
+          <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+          {retirementIdx > 0 && (
+            <ReferenceLine
+              x={retirementAge}
+              stroke={COLORS.orange}
+              strokeDasharray="4 2"
+              label={{ value: 'Retire', fontSize: 9, fill: COLORS.orange, position: 'insideTopRight' }}
+            />
+          )}
+          <Area type="monotone" dataKey="Home Equity" stackId="nw" stroke={COLORS.green} fill="url(#nwHomeGrad)" strokeWidth={1.5} dot={false} />
+          <Area type="monotone" dataKey="Portfolio" stackId="nw" stroke={COLORS.blue} fill="url(#nwPortGrad)" strokeWidth={2} dot={false} />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   )
 }

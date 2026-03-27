@@ -4,11 +4,17 @@ import { clsx } from 'clsx'
 export function MetricCards({ calculations }) {
   const { income, surplus, taxes, portfolio, fers, ss, tsp, baseValues } = calculations
 
+  const phase1Monthly = surplus.afterTaxPhase1 / 12
+  const phase2Monthly = surplus.afterTaxPhase2 / 12
+  const phase1Surplus = surplus.phase1SurplusMonthly
+  const phase2Surplus = surplus.phase2SurplusMonthly
+
   const cards = [
     {
-      label: 'After-Tax Monthly Income (Phase 2)',
-      value: formatCurrency(surplus.afterTaxPhase2 / 12),
-      subLabel: 'With Social Security',
+      label: 'Monthly Income — Phase 1',
+      value: formatCurrency(phase1Monthly),
+      subLabel: `Before SS (pension${fers?.hasSRS ? ' + SRS' : ''} + portfolio)`,
+      subLabel2: `Phase 2 (with SS): ${formatCurrency(phase2Monthly)}/mo`,
       color: 'blue',
       icon: '💰',
     },
@@ -20,11 +26,12 @@ export function MetricCards({ calculations }) {
       icon: '📊',
     },
     {
-      label: `Monthly ${surplus.phase2SurplusMonthly >= 0 ? 'Surplus' : 'Deficit'}`,
-      value: formatCurrency(Math.abs(surplus.phase2SurplusMonthly)),
-      subLabel: surplus.phase2SurplusMonthly >= 0 ? 'After taxes & expenses' : '⚠️ Income gap — see report',
-      color: surplus.phase2SurplusMonthly >= 0 ? 'green' : 'red',
-      icon: surplus.phase2SurplusMonthly >= 0 ? '✅' : '⚠️',
+      label: `Monthly ${phase1Surplus >= 0 ? 'Surplus' : 'Deficit'} — Phase 1`,
+      value: formatCurrency(Math.abs(phase1Surplus)),
+      subLabel: phase1Surplus >= 0 ? 'Before SS kicks in' : '⚠️ Pre-SS income gap',
+      subLabel2: `Phase 2: ${phase2Surplus >= 0 ? '+' : ''}${formatCurrency(phase2Surplus)}/mo`,
+      color: phase1Surplus >= 0 ? 'green' : 'red',
+      icon: phase1Surplus >= 0 ? '✅' : '⚠️',
     },
     {
       label: 'Portfolio at Life Expectancy',
@@ -59,6 +66,9 @@ export function MetricCards({ calculations }) {
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
             <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-0.5">{card.label}</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{card.subLabel}</p>
+            {card.subLabel2 && (
+              <p className="text-xs text-[#2E6DB4] dark:text-blue-400 mt-0.5 font-medium">{card.subLabel2}</p>
+            )}
           </div>
         </div>
       ))}
@@ -85,7 +95,7 @@ export function IncomeBreakdownCard({ calculations }) {
 
   return (
     <div className="card">
-      <h3 className="section-title">Income Breakdown (Phase 2)</h3>
+      <h3 className="section-title">Income Breakdown — Phase 2 (with SS)</h3>
       <div className="space-y-2">
         {streams.map(s => (
           <div key={s.label} className="flex items-center gap-2">

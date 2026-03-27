@@ -118,7 +118,7 @@ export function RetirementAgeComparison({ ssAt62Monthly = 0, ssAtFRAMonthly = 0 
               <th className="text-right pb-2 font-medium">FERS/mo</th>
               {!isCSRS && <th className="text-right pb-2 font-medium">SRS / SS</th>}
               <th className="text-right pb-2 font-medium">Total/mo</th>
-              <th className="text-left pb-2 pl-3 font-medium w-40">Bar</th>
+              <th className="text-left pb-2 pl-3 font-medium w-40">vs Best</th>
             </tr>
           </thead>
           <tbody>

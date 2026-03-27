@@ -475,7 +475,12 @@ export function useCalculations(form, assumptions) {
     const rothAtLE = roth.balance * Math.pow(1 + assumptions.rothIRAReturnRate - (roth.annualIncome / Math.max(roth.balance, 1)), baseValues.yearsInRetirement)
     const surplusInvested = Math.max(0, surplus.phase2Surplus) * ((Math.pow(1 + assumptions.surplusReinvestmentReturn, baseValues.yearsInRetirement) - 1) / assumptions.surplusReinvestmentReturn)
 
-    const totalNetWorthAtLE = tspAtLE + Math.max(0, rothAtLE) + home.valueAtLifeExpectancy + surplusInvested
+    // Home sale proceeds (sell_buy or sell_rent) are invested in the portfolio
+    const homeProceeds = home.cashAfterPurchase || 0
+    const homeProceedsGrown = homeProceeds > 0
+      ? homeProceeds * Math.pow(1 + assumptions.portfolioDrawdownReturn, baseValues.yearsInRetirement)
+      : 0
+    const totalNetWorthAtLE = tspAtLE + Math.max(0, rothAtLE) + home.valueAtLifeExpectancy + surplusInvested + homeProceedsGrown
     const perChildInheritance = form.numberOfChildren > 0 ? totalNetWorthAtLE / form.numberOfChildren : 0
 
     // longevityYears = how many years TSP lasts from retirement

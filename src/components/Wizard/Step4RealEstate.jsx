@@ -83,21 +83,29 @@ export default function Step4RealEstate() {
         </div>
 
         {selling && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Target retirement home budget ($)</label>
-              <MoneyInput value={form.newHomeBudget || 0} onChange={v => updateField('newHomeBudget', v)} placeholder="350,000" />
-            </div>
-            {form.retirementHomePlan === 'sell_buy' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label">How will you buy?</label>
-                <select className="input-field" value={form.retirementHousingType || 'buy_outright'} onChange={e => updateField('retirementHousingType', e.target.value)}>
-                  <option value="buy_outright">Buy outright (cash)</option>
-                  <option value="buy_mortgage">Buy with small mortgage</option>
-                  <option value="rent">Rent long-term</option>
-                </select>
+                <label className="label">Target retirement home budget ($)</label>
+                <MoneyInput value={form.newHomeBudget || 0} onChange={v => updateField('newHomeBudget', v)} placeholder="350,000" />
               </div>
-            )}
+              {form.retirementHomePlan === 'sell_buy' && (
+                <div>
+                  <label className="label">How will you buy?</label>
+                  <select className="input-field" value={form.retirementHousingType || 'buy_outright'} onChange={e => updateField('retirementHousingType', e.target.value)}>
+                    <option value="buy_outright">Buy outright (cash)</option>
+                    <option value="buy_mortgage">Buy with small mortgage</option>
+                    <option value="rent">Rent long-term</option>
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+              <span className="font-semibold">How proceeds are handled:</span>{' '}
+              {form.retirementHomePlan === 'sell_buy'
+                ? 'After paying selling costs (~6%) and purchasing your new home, any remaining cash is treated as a lump-sum portfolio contribution that grows throughout retirement.'
+                : 'After paying selling costs (~6%), the full net equity is treated as a lump-sum portfolio contribution that grows throughout retirement.'}
+            </div>
           </div>
         )}
       </div>

@@ -334,8 +334,24 @@ export function computeHomeProjection({
   const grossEquity = valueAtRetirement - mortgageAtRetirement
   const sellingCosts = grossEquity > 0 ? valueAtRetirement * sellingCostsPct : 0
   const netEquity = grossEquity - sellingCosts
-  const cashAfterPurchase = planAtRetirement === 'sell' ? netEquity - (newHomePrice || 0) : 0
-  const valueAtLifeExpectancy = currentValue * Math.pow(1 + appreciationRate, yearsToRetirement + 25)  // approx
+
+  // Proceeds from selling: 'sell_buy' → net equity minus new home purchase price
+  //                        'sell_rent' → full net equity (no replacement home)
+  const isSelling = planAtRetirement === 'sell_buy' || planAtRetirement === 'sell_rent' || planAtRetirement === 'sell'
+  const cashAfterPurchase = isSelling ? Math.max(0, netEquity - (planAtRetirement === 'sell_buy' ? (newHomePrice || 0) : 0)) : 0
+
+  // Value at life expectancy:
+  // - selling+buying a new home: new home appreciates for ~25 years of retirement
+  // - selling+renting: no home equity at LE
+  // - keeping: original home appreciates
+  let valueAtLifeExpectancy
+  if (planAtRetirement === 'sell_buy' && newHomePrice > 0) {
+    valueAtLifeExpectancy = newHomePrice * Math.pow(1 + appreciationRate, 25)
+  } else if (planAtRetirement === 'sell_rent' || planAtRetirement === 'sell') {
+    valueAtLifeExpectancy = 0
+  } else {
+    valueAtLifeExpectancy = currentValue * Math.pow(1 + appreciationRate, yearsToRetirement + 25)
+  }
 
   return {
     currentValue,

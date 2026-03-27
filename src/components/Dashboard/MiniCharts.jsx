@@ -157,7 +157,13 @@ export function SurplusMiniChart({ chartData }) {
           axisLine={false}
           interval="preserveStartEnd"
         />
-        <YAxis hide />
+        <YAxis
+          tick={{ fontSize: 9, fill: '#9CA3AF' }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={v => v >= 1000 || v <= -1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
+          width={38}
+        />
         <Tooltip
           formatter={(v) => formatCurrency(v, { compact: true })}
           labelFormatter={(l) => `Year ${l}`}
